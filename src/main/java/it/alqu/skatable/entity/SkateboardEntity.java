@@ -243,8 +243,12 @@ public class SkateboardEntity extends VehicleEntity {
 
 	@Override
 	protected void destroy(ServerLevel level, DamageSource source) {
-		// Drop the actual board (with deck material + damage), not a fresh item.
-		this.spawnAtLocation(level, this.getBoardItem());
+		// Mirrors VehicleEntity.destroy(ServerLevel, Item), but drops the actual
+		// board (with deck material, damage and enchantments) instead of a fresh item.
+		this.kill(level);
+		if (Boolean.TRUE.equals(level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.ENTITY_DROPS))) {
+			this.spawnAtLocation(level, this.getBoardItem());
+		}
 	}
 
 	// ---------------------------------------------------------------- input from the rider
@@ -352,7 +356,7 @@ public class SkateboardEntity extends VehicleEntity {
 
 			// Ollie.
 			if (riderControlled && this.inputJump && !this.jumpWasDown) {
-				motion = new Vec3(motion.x, 0.38, motion.z);
+				motion = new Vec3(motion.x, 0.46, motion.z);
 				this.playSound(Skatable.SOUND_OLLIE, 0.8f, 1.0f + this.random.nextFloat() * 0.2f);
 				this.startTrickInternal(Trick.OLLIE);
 				this.airTicks = 1;
@@ -473,7 +477,7 @@ public class SkateboardEntity extends VehicleEntity {
 		if (this.onGround() || this.isGrinding() || this.activeTrick != null && this.activeTrick != Trick.OLLIE) {
 			return false;
 		}
-		if (this.airTicks < 1 || this.airTicks > 12) {
+		if (this.airTicks < 1 || this.airTicks > 15) {
 			return false;
 		}
 		this.startTrickInternal(trick);
@@ -556,7 +560,7 @@ public class SkateboardEntity extends VehicleEntity {
 		this.jumpWasDown = this.inputJump;
 
 		if (jumpOff) {
-			motion = new Vec3(motion.x, 0.32, motion.z);
+			motion = new Vec3(motion.x, 0.42, motion.z);
 			this.playSound(Skatable.SOUND_OLLIE, 0.7f, 1.2f);
 			this.endGrind();
 		} else if (!stillOnRail || motion.horizontalDistance() < 0.04) {

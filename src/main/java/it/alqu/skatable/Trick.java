@@ -7,10 +7,10 @@ package it.alqu.skatable;
  */
 public enum Trick {
 	OLLIE("ollie", 0, 1),
-	KICKFLIP("kickflip", 11, 3),
-	HEELFLIP("heelflip", 11, 3),
-	POP_SHOVE_IT("pop_shove_it", 13, 4),
-	SPIN_360("spin_360", 19, 6),
+	KICKFLIP("kickflip", 7, 3),
+	HEELFLIP("heelflip", 7, 3),
+	POP_SHOVE_IT("pop_shove_it", 9, 4),
+	SPIN_360("spin_360", 13, 6),
 	GRIND("grind", 0, 2);
 
 	private final String id;

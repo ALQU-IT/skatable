@@ -119,6 +119,9 @@ public final class SkatableNet {
 				serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.CRIT,
 						board.getX(), board.getY() + 0.3, board.getZ(), 8, 0.3, 0.2, 0.3, 0.15);
 			} else {
+				// Bail: the client already dismounted locally; make it authoritative
+				// server-side too, otherwise the player can never remount.
+				board.ejectPassengers();
 				board.damageBoard(1);
 			}
 		});
