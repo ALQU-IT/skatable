@@ -22,14 +22,17 @@ public class RideInputHandler {
 	private final KeyMapping heelflipKey;
 	private final KeyMapping shoveItKey;
 	private final KeyMapping spinKey;
+	private final KeyMapping toggleTricksKey;
 
 	private Input lastInput = Input.EMPTY;
 
-	public RideInputHandler(KeyMapping kickflipKey, KeyMapping heelflipKey, KeyMapping shoveItKey, KeyMapping spinKey) {
+	public RideInputHandler(KeyMapping kickflipKey, KeyMapping heelflipKey, KeyMapping shoveItKey, KeyMapping spinKey,
+			KeyMapping toggleTricksKey) {
 		this.kickflipKey = kickflipKey;
 		this.heelflipKey = heelflipKey;
 		this.shoveItKey = shoveItKey;
 		this.spinKey = spinKey;
+		this.toggleTricksKey = toggleTricksKey;
 	}
 
 	public void tick(Minecraft minecraft) {
@@ -37,6 +40,13 @@ public class RideInputHandler {
 		if (player == null || minecraft.level == null) {
 			this.lastInput = Input.EMPTY;
 			return;
+		}
+
+		while (this.toggleTricksKey.consumeClick()) {
+			SkatableClientConfig config = SkatableClientConfig.get();
+			config.tricksEnabled = !config.tricksEnabled;
+			config.save();
+			TrickHudNotifier.onTricksToggled(config.tricksEnabled);
 		}
 		if (!(player.getVehicle() instanceof SkateboardEntity board) || board.getControllingPassenger() != player) {
 			this.lastInput = Input.EMPTY;
@@ -46,7 +56,7 @@ public class RideInputHandler {
 		Input input = player.input.keyPresses;
 		board.setInput(input.forward(), input.backward(), input.left(), input.right(), input.jump());
 
-		if (!board.onGround() && !board.isGrinding()) {
+		if (SkatableClientConfig.get().tricksEnabled && !board.onGround() && !board.isGrinding()) {
 			Trick trick = this.pollTrick(input);
 			if (trick != null && board.startTrick(trick)) {
 				TrickHudNotifier.onTrickStarted(trick);

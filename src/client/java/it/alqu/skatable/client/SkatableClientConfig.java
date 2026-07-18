@@ -25,6 +25,8 @@ public class SkatableClientConfig {
 	public boolean deckStats = true;
 	/** Play surface-dependent rolling sounds. */
 	public boolean rollSounds = true;
+	/** Trick system on/off. When off, A/D steer the board mid-air instead. */
+	public boolean tricksEnabled = true;
 
 	public static SkatableClientConfig get() {
 		if (instance == null) {

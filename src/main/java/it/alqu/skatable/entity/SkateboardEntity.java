@@ -368,6 +368,25 @@ public class SkateboardEntity extends VehicleEntity {
 		} else {
 			this.airTicks++;
 			motion = motion.multiply(0.995, 1.0, 0.995);
+			if (riderControlled && !Skatable.clientTricksEnabled.getAsBoolean()) {
+				// Tricks are toggled off: lean to turn mid-air instead.
+				if (this.inputLeft) {
+					this.deltaRotation -= 1.4f;
+				}
+				if (this.inputRight) {
+					this.deltaRotation += 1.4f;
+				}
+				this.deltaRotation *= 0.85f;
+				this.setYRot(this.getYRot() + this.deltaRotation);
+				double airSpeed = motion.horizontalDistance();
+				if (airSpeed > 0.02) {
+					float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+					Vec3 forward = new Vec3(-Mth.sin(yawRad), 0.0, Mth.cos(yawRad));
+					Vec3 dir = new Vec3(motion.x, 0.0, motion.z).normalize();
+					Vec3 blended = dir.scale(0.7).add(forward.scale(0.3)).normalize().scale(airSpeed);
+					motion = new Vec3(blended.x, motion.y, blended.z);
+				}
+			}
 			this.tryStartGrind(motion);
 			if (this.isGrinding()) {
 				return;

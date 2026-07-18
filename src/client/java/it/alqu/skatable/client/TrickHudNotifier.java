@@ -14,6 +14,10 @@ public final class TrickHudNotifier {
 		TrickHud.show(I18n.get(Trick.GRIND.translationKey()) + "!", "", 1200);
 	}
 
+	public static void onTricksToggled(boolean enabled) {
+		TrickHud.show(I18n.get(enabled ? "hud.skatable.tricks_on" : "hud.skatable.tricks_off"), "", 1500);
+	}
+
 	public static void onTrickResult(Trick trick, int combo, boolean success, int xp) {
 		if (success) {
 			String sub = combo > 1

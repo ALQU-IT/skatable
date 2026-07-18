@@ -25,6 +25,7 @@ public class SkatableClient implements ClientModInitializer {
 		SkatableClientConfig.get();
 		Skatable.clientRollSounds = () -> SkatableClientConfig.get().rollSounds;
 		Skatable.clientDeckStats = () -> SkatableClientConfig.get().deckStats;
+		Skatable.clientTricksEnabled = () -> SkatableClientConfig.get().tricksEnabled;
 
 		// Rendering.
 		EntityRendererRegistry.register(Skatable.SKATEBOARD_ENTITY, SkateboardRenderer::new);
@@ -42,8 +43,10 @@ public class SkatableClient implements ClientModInitializer {
 		KeyMapping heelflip = register("heelflip", category);
 		KeyMapping shoveIt = register("pop_shove_it", category);
 		KeyMapping spin = register("spin_360", category);
+		KeyMapping toggleTricks = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.skatable.toggle_tricks", org.lwjgl.glfw.GLFW.GLFW_KEY_G, category));
 
-		RideInputHandler inputHandler = new RideInputHandler(kickflip, heelflip, shoveIt, spin);
+		RideInputHandler inputHandler = new RideInputHandler(kickflip, heelflip, shoveIt, spin, toggleTricks);
 		ClientTickEvents.END_CLIENT_TICK.register(inputHandler::tick);
 
 		// Networking: the common code calls into this sender on the client side,

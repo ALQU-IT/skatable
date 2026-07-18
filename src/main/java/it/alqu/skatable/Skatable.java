@@ -41,6 +41,7 @@ public class Skatable implements ModInitializer {
 	 */
 	public static java.util.function.BooleanSupplier clientRollSounds = () -> true;
 	public static java.util.function.BooleanSupplier clientDeckStats = () -> true;
+	public static java.util.function.BooleanSupplier clientTricksEnabled = () -> true;
 
 	// Deck material, stored on the item stack and mirrored into the entity's synched board stack.
 	public static final DataComponentType<Block> DECK_COMPONENT = DataComponentType.<Block>builder()
