@@ -44,6 +44,7 @@ public class SkateboardRenderer extends EntityRenderer<SkateboardEntity, Skatebo
 		state.hurtDir = entity.getHurtDir();
 		state.damageTime = Math.max(entity.getDamage() - partialTicks, 0.0f);
 		state.grinding = entity.isGrinding();
+		state.wheelRoll = Mth.lerp(partialTicks, entity.wheelRollO, entity.wheelRoll);
 		if (entity.animTicks > 0 && entity.animTrick != null && entity.animTrick != Trick.OLLIE) {
 			state.trick = entity.animTrick;
 			state.trickProgress = Mth.clamp(1.0f - (entity.animTicks - partialTicks) / entity.animDuration, 0.0f, 1.0f);

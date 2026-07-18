@@ -14,4 +14,6 @@ public class SkateboardRenderState extends EntityRenderState {
 	/** 0..1 over the trick animation. */
 	public float trickProgress;
 	public boolean grinding;
+	/** Accumulated wheel rotation in radians, interpolated. */
+	public float wheelRoll;
 }

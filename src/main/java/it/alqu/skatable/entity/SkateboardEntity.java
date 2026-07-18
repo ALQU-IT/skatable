@@ -70,6 +70,10 @@ public class SkateboardEntity extends VehicleEntity {
 	public int animTicks;
 	public int animDuration;
 	public int grindWobble;
+	/** Accumulated wheel rotation in radians (signed: negative when rolling backwards). */
+	public float wheelRoll;
+	public float wheelRollO;
+	private static final float WHEEL_VISUAL_RADIUS = 0.12f;
 
 	private final InterpolationHandler interpolation = new InterpolationHandler(this, 3);
 	private int rollSoundCooldown;
@@ -297,6 +301,13 @@ public class SkateboardEntity extends VehicleEntity {
 		this.applyEffectsFromBlocks();
 
 		if (this.level().isClientSide()) {
+			// Spin the wheels with the distance actually travelled (signed, so
+			// rolling backwards spins them the other way).
+			this.wheelRollO = this.wheelRoll;
+			float yawRad = this.getYRot() * Mth.DEG_TO_RAD;
+			double along = (this.getX() - this.xo) * -Mth.sin(yawRad) + (this.getZ() - this.zo) * Mth.cos(yawRad);
+			this.wheelRoll += (float) (along / WHEEL_VISUAL_RADIUS);
+
 			this.tickClientAmbience();
 			if (this.animTicks > 0) {
 				this.animTicks--;
