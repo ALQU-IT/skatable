@@ -1,0 +1,14 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:bedrock",
+		"minecraft:barrier",
+		"minecraft:reinforced_deepslate",
+		"minecraft:crying_obsidian",
+		"minecraft:respawn_anchor",
+		"minecraft:slime_block",
+		"minecraft:honey_block",
+		"#minecraft:beds",
+		"minecraft:tnt"
+	]
+}

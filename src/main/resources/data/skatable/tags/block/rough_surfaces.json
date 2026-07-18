@@ -1,0 +1,20 @@
+{
+	"replace": false,
+	"values": [
+		"#minecraft:dirt",
+		"minecraft:grass_block",
+		"minecraft:dirt_path",
+		"minecraft:farmland",
+		"minecraft:gravel",
+		"minecraft:coarse_dirt",
+		"minecraft:podzol",
+		"minecraft:mycelium",
+		"#minecraft:wool",
+		"#minecraft:wool_carpets",
+		"minecraft:moss_block",
+		"minecraft:pale_moss_block",
+		"minecraft:hay_block",
+		"minecraft:snow",
+		"minecraft:snow_block"
+	]
+}

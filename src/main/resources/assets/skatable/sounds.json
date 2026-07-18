@@ -1,0 +1,38 @@
+{
+	"skateboard.ollie": {
+		"subtitle": "sound.skatable.skateboard.ollie",
+		"sounds": [
+			{ "name": "minecraft:entity.rabbit.jump", "type": "event" }
+		]
+	},
+	"skateboard.land": {
+		"subtitle": "sound.skatable.skateboard.land",
+		"sounds": [
+			{ "name": "minecraft:block.wood.fall", "type": "event" }
+		]
+	},
+	"skateboard.grind": {
+		"subtitle": "sound.skatable.skateboard.grind",
+		"sounds": [
+			{ "name": "minecraft:block.grindstone.use", "type": "event" }
+		]
+	},
+	"skateboard.crash": {
+		"subtitle": "sound.skatable.skateboard.crash",
+		"sounds": [
+			{ "name": "minecraft:block.wood.break", "type": "event" }
+		]
+	},
+	"skateboard.break": {
+		"subtitle": "sound.skatable.skateboard.break",
+		"sounds": [
+			{ "name": "minecraft:entity.item.break", "type": "event" }
+		]
+	},
+	"skateboard.trick": {
+		"subtitle": "sound.skatable.skateboard.trick",
+		"sounds": [
+			{ "name": "minecraft:entity.breeze.jump", "type": "event" }
+		]
+	}
+}

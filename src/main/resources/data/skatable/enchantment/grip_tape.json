@@ -1,0 +1,20 @@
+{
+	"description": {
+		"translate": "enchantment.skatable.grip_tape"
+	},
+	"supported_items": "#skatable:skateboards",
+	"weight": 3,
+	"max_level": 3,
+	"min_cost": {
+		"base": 8,
+		"per_level_above_first": 7
+	},
+	"max_cost": {
+		"base": 45,
+		"per_level_above_first": 9
+	},
+	"anvil_cost": 2,
+	"slots": [
+		"any"
+	]
+}
