@@ -64,8 +64,9 @@ override the defaults when bound).
 
 ## Enchanting & repair
 
-The skateboard accepts **Unbreaking** and **Mending**, plus a custom **Grip Tape**
-enchantment (3 levels) that widens the landing tolerance for tricks. Repair it in an
+The skateboard accepts **Unbreaking** and **Mending**, plus two custom enchantments:
+**Grip Tape** (3 levels) widens the landing tolerance for tricks, and **Swift Bearings**
+(3 levels) adds +10% acceleration and +8% top speed per level. Repair the board in an
 anvil with the same block the deck is made of.
 
 ## Client config

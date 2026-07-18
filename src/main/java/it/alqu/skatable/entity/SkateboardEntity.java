@@ -102,8 +102,17 @@ public class SkateboardEntity extends VehicleEntity {
 	}
 
 	public int getGripTapeLevel() {
+		return this.enchantLevel(Skatable.GRIP_TAPE);
+	}
+
+	/** Swift Bearings: +10% acceleration and +8% top speed per level. */
+	public int getSwiftBearingsLevel() {
+		return this.enchantLevel(Skatable.SWIFT_BEARINGS);
+	}
+
+	private int enchantLevel(net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> key) {
 		var enchantments = this.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
-		return enchantments.get(Skatable.GRIP_TAPE)
+		return enchantments.get(key)
 				.map(holder -> net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder, this.getBoardItem()))
 				.orElse(0);
 	}
@@ -317,6 +326,7 @@ public class SkateboardEntity extends VehicleEntity {
 				this.ejectPassengers();
 			}
 
+			int bearings = riderControlled ? this.getSwiftBearingsLevel() : 0;
 			float accelInput = 0.0f;
 			if (riderControlled) {
 				if (this.inputLeft) {
@@ -326,7 +336,7 @@ public class SkateboardEntity extends VehicleEntity {
 					this.deltaRotation += this.steerRate(horizontalSpeed);
 				}
 				if (this.inputForward && surface.rideable()) {
-					accelInput = 0.05f * this.accelMultiplier() * surface.accelFactor();
+					accelInput = 0.06f * this.accelMultiplier() * surface.accelFactor() * (1.0f + 0.1f * bearings);
 				}
 				if (this.inputBackward) {
 					motion = motion.multiply(0.88, 1.0, 0.88);
@@ -351,7 +361,7 @@ public class SkateboardEntity extends VehicleEntity {
 			double friction = surface.friction();
 			motion = new Vec3(motion.x * friction, motion.y, motion.z * friction);
 
-			double maxSpeed = MAX_BASE_SPEED * surface.maxSpeedFactor();
+			double maxSpeed = MAX_BASE_SPEED * surface.maxSpeedFactor() * (1.0 + 0.08 * bearings);
 			double newSpeed = motion.horizontalDistance();
 			if (newSpeed > maxSpeed) {
 				double scale = maxSpeed / newSpeed;
@@ -630,7 +640,8 @@ public class SkateboardEntity extends VehicleEntity {
 			return new Surface(true, 0.99, 1.1f, 1.15);
 		}
 		if (state.is(SkatableTags.ROUGH_SURFACES)) {
-			return new Surface(true, 0.94, 0.55f, 0.6);
+			// Still the slowest rideable surface, but cruises near an average horse.
+			return new Surface(true, 0.95, 0.8f, 0.85);
 		}
 		return new Surface(true, 0.975, 1.0f, 1.0);
 	}
@@ -710,6 +721,7 @@ public class SkateboardEntity extends VehicleEntity {
 
 	@Override
 	public float maxUpStep() {
-		return 0.6f;
+		// Like a horse: rolls up single-block steps instead of getting stuck on them.
+		return 1.0f;
 	}
 }

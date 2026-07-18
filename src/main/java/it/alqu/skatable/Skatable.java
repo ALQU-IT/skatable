@@ -68,6 +68,7 @@ public class Skatable implements ModInitializer {
 			new RecipeSerializer<>(SkateboardRecipe.MAP_CODEC, SkateboardRecipe.STREAM_CODEC);
 
 	public static final ResourceKey<Enchantment> GRIP_TAPE = ResourceKey.create(Registries.ENCHANTMENT, id("grip_tape"));
+	public static final ResourceKey<Enchantment> SWIFT_BEARINGS = ResourceKey.create(Registries.ENCHANTMENT, id("swift_bearings"));
 
 	public static final SoundEvent SOUND_OLLIE = sound("skateboard.ollie");
 	public static final SoundEvent SOUND_LAND = sound("skateboard.land");

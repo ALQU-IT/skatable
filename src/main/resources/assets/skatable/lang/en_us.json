@@ -3,6 +3,7 @@
 	"item.skatable.skateboard.named": "Skateboard (%s)",
 	"entity.skatable.skateboard": "Skateboard",
 	"enchantment.skatable.grip_tape": "Grip Tape",
+	"enchantment.skatable.swift_bearings": "Swift Bearings",
 	"key.categories.skatable.skatable": "Skatable",
 	"key.skatable.kickflip": "Kickflip (override)",
 	"key.skatable.heelflip": "Heelflip (override)",
