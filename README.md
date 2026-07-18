@@ -50,9 +50,9 @@ sooner. The item name always shows the material — e.g. *Skateboard (Diamond Bl
 
 Momentum physics: the board keeps rolling and slowly loses speed to friction.
 
-- **Speed:** on grass and dirt you cruise at roughly **average-horse speed** (~9.5 m/s);
-  smooth blocks (stone, concrete, quartz, packed ice...) are noticeably faster, ice
-  fastest of all. Sand, soul sand, mud and water don't work at all.
+- **Speed:** clearly faster than sprinting everywhere rideable — grass and dirt cruise
+  around ~12 m/s (faster than an average horse), stone and other smooth blocks reach
+  ~16 m/s, ice nearly 20 m/s. Sand, soul sand, mud and water don't work at all.
 - **Terrain:** the board rolls up 1-block ledges like a horse. Downhill speeds you up,
   uphill slows you down. Crashing into a wall (2+ blocks) at speed throws you off,
   hurts a little, and damages the board. Riding reduces fall damage.

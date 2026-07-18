@@ -43,7 +43,7 @@ public class SkateboardEntity extends VehicleEntity {
 			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.BOOLEAN);
 
 	public static final float CRASH_SPEED = 0.28f;
-	private static final float MAX_BASE_SPEED = 0.55f;
+	private static final float MAX_BASE_SPEED = 0.72f;
 
 	// Rider input, fed on the controlling side (client of the riding player).
 	private boolean inputForward;
@@ -336,7 +336,7 @@ public class SkateboardEntity extends VehicleEntity {
 					this.deltaRotation += this.steerRate(horizontalSpeed);
 				}
 				if (this.inputForward && surface.rideable()) {
-					accelInput = 0.06f * this.accelMultiplier() * surface.accelFactor() * (1.0f + 0.1f * bearings);
+					accelInput = 0.075f * this.accelMultiplier() * surface.accelFactor() * (1.0f + 0.1f * bearings);
 				}
 				if (this.inputBackward) {
 					motion = motion.multiply(0.88, 1.0, 0.88);
@@ -436,8 +436,10 @@ public class SkateboardEntity extends VehicleEntity {
 				Vec3 dir = new Vec3(motion.x, 0.0, motion.z).normalize();
 				this.setDeltaMovement(motion.add(dir.scale(Math.min(-dy, 1.0) * 0.055)));
 			} else if (dy > 0.01) {
-				// Uphill costs momentum.
-				this.setDeltaMovement(motion.multiply(0.90, 1.0, 0.90));
+				// Uphill costs momentum in proportion to the climb: a full 1-block
+				// step costs ~10% once, a gentle slope barely anything.
+				double cut = 1.0 - Mth.clamp(dy, 0.0, 1.0) * 0.10;
+				this.setDeltaMovement(motion.multiply(cut, 1.0, cut));
 			}
 		}
 
