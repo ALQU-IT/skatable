@@ -185,14 +185,18 @@ public class SkateboardEntity extends VehicleEntity {
 		return this.getFirstPassenger() instanceof LivingEntity living ? living : super.getControllingPassenger();
 	}
 
+	/** Top of the deck, where the rider's feet go. */
+	private static final double DECK_TOP = 0.22;
+
 	@Override
 	protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float scale) {
-		return new Vec3(0.0, dimensions.height() + 0.05, 0.0);
+		return new Vec3(0.0, DECK_TOP, 0.0);
 	}
 
 	@Override
 	protected void positionRider(Entity passenger, MoveFunction moveFunction) {
-		super.positionRider(passenger, moveFunction);
+		// The rider stands on the board, so their feet sit on top of the deck.
+		moveFunction.accept(passenger, this.getX(), this.getY() + DECK_TOP, this.getZ());
 		passenger.setYRot(passenger.getYRot() + this.deltaRotation);
 		this.clampRotation(passenger);
 	}
