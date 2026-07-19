@@ -5,10 +5,14 @@ import it.alqu.skatable.SkatableTags;
 import it.alqu.skatable.Trick;
 import it.alqu.skatable.item.SkateboardItem;
 import it.alqu.skatable.net.SkatableNet;
+import it.alqu.skatable.power.DeckPower;
+import it.alqu.skatable.power.DeckPowers;
+import it.alqu.skatable.power.PowerData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -41,6 +45,16 @@ public class SkateboardEntity extends VehicleEntity {
 			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.ITEM_STACK);
 	private static final EntityDataAccessor<Boolean> DATA_GRINDING =
 			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Integer> DATA_POWER_COOLDOWN =
+			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> DATA_SURGE_TICKS =
+			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> DATA_DASH_TICKS =
+			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> DATA_OXIDATION =
+			SynchedEntityData.defineId(SkateboardEntity.class, EntityDataSerializers.INT);
+
+	private static final Identifier KNOCKBACK_MODIFIER_ID = Skatable.id("stone_deck");
 
 	public static final float CRASH_SPEED = 0.28f;
 	private static final float MAX_BASE_SPEED = 0.72f;
@@ -78,6 +92,14 @@ public class SkateboardEntity extends VehicleEntity {
 	private final InterpolationHandler interpolation = new InterpolationHandler(this, 3);
 	private int rollSoundCooldown;
 
+	// Deck power state. rideTime/resonance are server-side and persisted;
+	// lava/wallride budgets live on the controlling side and reset on the ground.
+	private int rideTime;
+	private int resonanceMeter;
+	private int lavaTicks;
+	private int wallrideTicks;
+	private Vec3 preMoveMotion = Vec3.ZERO;
+
 	public SkateboardEntity(EntityType<? extends SkateboardEntity> type, Level level) {
 		super(type, level);
 		this.blocksBuilding = true;
@@ -88,12 +110,38 @@ public class SkateboardEntity extends VehicleEntity {
 		super.defineSynchedData(builder);
 		builder.define(DATA_BOARD_ITEM, ItemStack.EMPTY);
 		builder.define(DATA_GRINDING, false);
+		builder.define(DATA_POWER_COOLDOWN, 0);
+		builder.define(DATA_SURGE_TICKS, 0);
+		builder.define(DATA_DASH_TICKS, 0);
+		builder.define(DATA_OXIDATION, 0);
 	}
 
 	// ---------------------------------------------------------------- board item / deck
 
 	public void setBoardItem(ItemStack stack) {
 		this.entityData.set(DATA_BOARD_ITEM, stack.copy());
+		PowerData data = SkateboardItem.powerData(stack);
+		if (!this.level().isClientSide() && !data.isEmpty()) {
+			this.entityData.set(DATA_POWER_COOLDOWN, data.cooldown());
+			this.entityData.set(DATA_OXIDATION, data.oxidation());
+			this.rideTime = data.rideTime();
+			this.resonanceMeter = data.resonance();
+		}
+	}
+
+	/** The board item stamped with the current power state (for pickup/drops). */
+	public ItemStack boardItemWithState() {
+		ItemStack stack = this.getBoardItem();
+		PowerData data = this.currentPowerData();
+		if (!data.isEmpty()) {
+			stack.set(Skatable.POWER_DATA_COMPONENT, data);
+		}
+		return stack;
+	}
+
+	private PowerData currentPowerData() {
+		return new PowerData(this.entityData.get(DATA_POWER_COOLDOWN), this.rideTime,
+				this.entityData.get(DATA_OXIDATION), this.resonanceMeter);
 	}
 
 	public ItemStack getBoardItem() {
@@ -119,6 +167,233 @@ public class SkateboardEntity extends VehicleEntity {
 		return enchantments.get(key)
 				.map(holder -> net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder, this.getBoardItem()))
 				.orElse(0);
+	}
+
+	// ---------------------------------------------------------------- deck powers
+
+	public DeckPower power() {
+		return DeckPowers.resolve(this.getDeckBlock());
+	}
+
+	public int powerCooldown() {
+		return this.entityData.get(DATA_POWER_COOLDOWN);
+	}
+
+	public int surgeTicks() {
+		return this.entityData.get(DATA_SURGE_TICKS);
+	}
+
+	public int dashTicks() {
+		return this.entityData.get(DATA_DASH_TICKS);
+	}
+
+	public int oxidationStage() {
+		return this.entityData.get(DATA_OXIDATION);
+	}
+
+	/** Deck block adjusted for visual-only effects (copper oxidation). */
+	public net.minecraft.world.level.block.Block visualDeckBlock() {
+		return DeckPowers.oxidizedVisual(this.getDeckBlock(), this.oxidationStage());
+	}
+
+	private boolean hasRider() {
+		return this.getControllingPassenger() instanceof Player;
+	}
+
+	/** Called from the server trick handler: amethyst resonance build-up. */
+	public void addResonance(int amount) {
+		this.resonanceMeter += amount;
+		if (this.resonanceMeter >= 100) {
+			this.resonanceMeter = 0;
+			this.entityData.set(DATA_SURGE_TICKS, 600);
+			this.playSound(net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_RESONATE, 1.0f, 1.0f);
+		}
+	}
+
+	/** Handles the R-key active ability, server side. */
+	public void tryActivatePower(ServerPlayer player) {
+		DeckPower power = this.power();
+		if (!power.isActive() || this.powerCooldown() > 0 || !(this.level() instanceof ServerLevel serverLevel)) {
+			return;
+		}
+		switch (power) {
+			case REDSTONE -> {
+				this.entityData.set(DATA_SURGE_TICKS, 60);
+				this.playSound(Skatable.SOUND_TRICK, 1.0f, 0.7f);
+			}
+			case TNT -> {
+				serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER,
+						this.getX(), this.getY() + 0.3, this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
+				this.level().playSound(null, this.getX(), this.getY(), this.getZ(),
+						Skatable.SOUND_CRASH, this.getSoundSource(), 1.5f, 0.7f);
+				this.ejectPassengers();
+				player.setDeltaMovement(player.getDeltaMovement().add(0.0, 1.8, 0.0));
+				player.hurtMarked = true;
+				this.damageBoard(20);
+			}
+			case DRAGON -> {
+				this.entityData.set(DATA_DASH_TICKS, 6);
+				this.playSound(net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT, 1.0f, 1.0f);
+			}
+			default -> {
+				return;
+			}
+		}
+		this.entityData.set(DATA_POWER_COOLDOWN, power.cooldownTicks());
+	}
+
+	/** Per-tick power upkeep; called on both sides from tick(). */
+	private void tickPowers() {
+		DeckPower power = this.power();
+		boolean ridden = this.hasRider();
+		if (this.level() instanceof ServerLevel serverLevel) {
+			if (this.powerCooldown() > 0) {
+				this.entityData.set(DATA_POWER_COOLDOWN, this.powerCooldown() - 1);
+			}
+			if (this.surgeTicks() > 0) {
+				this.entityData.set(DATA_SURGE_TICKS, this.surgeTicks() - 1);
+			}
+			int dash = this.dashTicks();
+			if (dash > 0) {
+				// Never end a dash inside a wall.
+				if (dash == 1 && !serverLevel.noCollision(this)) {
+					this.entityData.set(DATA_DASH_TICKS, 3);
+				} else {
+					this.entityData.set(DATA_DASH_TICKS, dash - 1);
+				}
+			}
+			if (ridden) {
+				this.tickServerPowerEffects(serverLevel, power);
+			}
+			this.updateRiderKnockbackResistance(power, ridden);
+		}
+		this.noPhysics = this.dashTicks() > 0;
+		if (this.onGround()) {
+			this.lavaTicks = 0;
+			this.wallrideTicks = 0;
+		}
+	}
+
+	private void tickServerPowerEffects(ServerLevel serverLevel, DeckPower power) {
+		Entity rider = this.getControllingPassenger();
+		switch (power) {
+			case ICE -> this.frostTrail(serverLevel);
+			case COPPER -> {
+				this.rideTime++;
+				int stage = Math.min(this.rideTime / 24000, 3);
+				if (stage != this.oxidationStage()) {
+					this.entityData.set(DATA_OXIDATION, stage);
+				}
+				if (serverLevel.isThundering() && serverLevel.canSeeSky(this.blockPosition())
+						&& this.surgeTicks() <= 0 && this.random.nextInt(1200) == 0) {
+					net.minecraft.world.entity.LightningBolt bolt =
+							net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.EVENT);
+					if (bolt != null) {
+						bolt.snapTo(this.position());
+						bolt.setVisualOnly(true);
+						serverLevel.addFreshEntity(bolt);
+					}
+					this.entityData.set(DATA_SURGE_TICKS, 1200);
+				}
+			}
+			case NETHER, NETHERITE -> {
+				if (rider instanceof LivingEntity living) {
+					living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+							net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 60, 0, true, false));
+				}
+			}
+			case PRISMARINE -> {
+				if (rider instanceof LivingEntity living) {
+					living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+							net.minecraft.world.effect.MobEffects.WATER_BREATHING, 60, 0, true, false));
+				}
+			}
+			case SCULK -> {
+				if (this.tickCount % 20 == 0) {
+					for (LivingEntity mob : serverLevel.getEntitiesOfClass(LivingEntity.class,
+							this.getBoundingBox().inflate(12.0), e -> !e.isPassengerOfSameVehicle(this) && !(e instanceof Player))) {
+						mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+								net.minecraft.world.effect.MobEffects.GLOWING, 40, 0, true, false));
+					}
+				}
+			}
+			case IRON -> {
+				double speed = new Vec3(this.getX() - this.xo, 0.0, this.getZ() - this.zo).length();
+				if (speed > 0.25 && rider instanceof ServerPlayer player) {
+					for (LivingEntity mob : serverLevel.getEntitiesOfClass(LivingEntity.class,
+							this.getBoundingBox().inflate(0.5), e -> !e.isPassengerOfSameVehicle(this))) {
+						if (mob.hurtServer(serverLevel, player.damageSources().playerAttack(player), (float) (2.0 + speed * 8.0))) {
+							mob.push((mob.getX() - this.getX()) * 0.6, 0.3, (mob.getZ() - this.getZ()) * 0.6);
+						}
+					}
+				}
+			}
+			case MAGMA -> {
+				double speed = new Vec3(this.getX() - this.xo, 0.0, this.getZ() - this.zo).length();
+				if (speed > 0.1) {
+					for (Entity target : serverLevel.getEntities(this, this.getBoundingBox().inflate(0.4),
+							e -> e instanceof LivingEntity && !e.isPassengerOfSameVehicle(this) && !e.fireImmune())) {
+						target.setRemainingFireTicks(Math.max(target.getRemainingFireTicks(), 40));
+					}
+				}
+			}
+			default -> {
+			}
+		}
+	}
+
+	private void frostTrail(ServerLevel serverLevel) {
+		Vec3 motion = new Vec3(this.getX() - this.xo, 0.0, this.getZ() - this.zo);
+		BlockPos center = BlockPos.containing(this.getX() + motion.x * 2.0, this.getY() - 0.6, this.getZ() + motion.z * 2.0);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				pos.setWithOffset(center, dx, 0, dz);
+				BlockState state = serverLevel.getBlockState(pos);
+				if (state.is(net.minecraft.world.level.block.Blocks.WATER) && state.getFluidState().isSource()
+						&& serverLevel.getBlockState(pos.above()).isAir()) {
+					serverLevel.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.FROSTED_ICE.defaultBlockState());
+				}
+			}
+		}
+	}
+
+	private void updateRiderKnockbackResistance(DeckPower power, boolean ridden) {
+		if (!(this.getControllingPassenger() instanceof ServerPlayer player)) {
+			return;
+		}
+		var attribute = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+		if (attribute == null) {
+			return;
+		}
+		boolean want = ridden && power == DeckPower.STONE;
+		boolean has = attribute.getModifier(KNOCKBACK_MODIFIER_ID) != null;
+		if (want && !has) {
+			attribute.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+					KNOCKBACK_MODIFIER_ID, 1.0, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+		} else if (!want && has) {
+			attribute.removeModifier(KNOCKBACK_MODIFIER_ID);
+		}
+	}
+
+	private float powerSpeedMultiplier(DeckPower power) {
+		float m = power == DeckPower.CONCRETE ? 1.15f : 1.0f;
+		if (this.surgeTicks() > 0) {
+			if (power == DeckPower.REDSTONE) {
+				m *= 2.0f;
+			} else if (power == DeckPower.COPPER) {
+				m *= 1.5f;
+			}
+		}
+		return m;
+	}
+
+	private float ollieImpulse(DeckPower power) {
+		float v = power == DeckPower.END ? 0.62f : 0.46f;
+		if (power == DeckPower.AMETHYST && this.surgeTicks() > 0) {
+			v += 0.14f;
+		}
+		return v;
 	}
 
 	public float accelMultiplier() {
@@ -171,7 +446,7 @@ public class SkateboardEntity extends VehicleEntity {
 		if (player.isSecondaryUseActive()) {
 			// Sneak + use: pick the board back up, keeping deck material, damage and enchantments.
 			if (!this.level().isClientSide()) {
-				ItemStack stack = this.getBoardItem();
+				ItemStack stack = this.boardItemWithState();
 				if (!player.getInventory().add(stack)) {
 					player.drop(stack, false);
 				}
@@ -186,6 +461,17 @@ public class SkateboardEntity extends VehicleEntity {
 			return player.startRiding(this) ? InteractionResult.CONSUME : InteractionResult.PASS;
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	@Override
+	protected void removePassenger(Entity passenger) {
+		super.removePassenger(passenger);
+		if (passenger instanceof ServerPlayer player) {
+			var attribute = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+			if (attribute != null) {
+				attribute.removeModifier(KNOCKBACK_MODIFIER_ID);
+			}
+		}
 	}
 
 	@Override
@@ -255,7 +541,7 @@ public class SkateboardEntity extends VehicleEntity {
 
 	@Override
 	public ItemStack getPickResult() {
-		return this.getBoardItem().copy();
+		return this.boardItemWithState();
 	}
 
 	@Override
@@ -264,7 +550,7 @@ public class SkateboardEntity extends VehicleEntity {
 		// board (with deck material, damage and enchantments) instead of a fresh item.
 		this.kill(level);
 		if (Boolean.TRUE.equals(level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.ENTITY_DROPS))) {
-			this.spawnAtLocation(level, this.getBoardItem());
+			this.spawnAtLocation(level, this.boardItemWithState());
 		}
 	}
 
@@ -299,6 +585,7 @@ public class SkateboardEntity extends VehicleEntity {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
 		this.applyEffectsFromBlocks();
+		this.tickPowers();
 
 		if (this.level().isClientSide()) {
 			// Spin the wheels with the distance actually travelled (signed, so
@@ -318,6 +605,16 @@ public class SkateboardEntity extends VehicleEntity {
 	private void tickPhysics() {
 		boolean riderControlled = this.getControllingPassenger() instanceof Player;
 		boolean grinding = this.isGrinding();
+		DeckPower deckPower = this.power();
+
+		// Dragon deck dash: phase forward through anything for a few ticks.
+		if (this.dashTicks() > 0) {
+			float dashYaw = this.getYRot() * Mth.DEG_TO_RAD;
+			this.setDeltaMovement(new Vec3(-Mth.sin(dashYaw), 0.0, Mth.cos(dashYaw)).scale(0.9));
+			this.move(MoverType.SELF, this.getDeltaMovement());
+			this.wasOnSurface = true;
+			return;
+		}
 
 		if (grinding) {
 			this.tickGrind();
@@ -330,9 +627,22 @@ public class SkateboardEntity extends VehicleEntity {
 		double horizontalSpeed = motion.horizontalDistance();
 		Surface surface = this.surfaceBelow();
 
+		// Fluid powers: nether/netherite skim lava, ice skims onto its own frost trail.
+		if (this.isInLava() && riderControlled
+				&& (deckPower == DeckPower.NETHERITE || deckPower == DeckPower.NETHER && this.lavaTicks < 40)) {
+			this.lavaTicks++;
+			if (deckPower == DeckPower.NETHER && this.lavaTicks == 30) {
+				this.playSound(net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, 1.0f, 0.8f);
+			}
+			motion = new Vec3(motion.x * 0.99, Math.max(motion.y, 0.06), motion.z * 0.99);
+		}
+		if (this.wasTouchingWater && riderControlled && deckPower == DeckPower.ICE && horizontalSpeed > 0.08) {
+			motion = new Vec3(motion.x, Math.max(motion.y, 0.08), motion.z);
+		}
+
 		if (this.onGround()) {
 			this.airTicks = 0;
-			if (this.wasTouchingWater) {
+			if (this.wasTouchingWater && deckPower != DeckPower.PRISMARINE && deckPower != DeckPower.ICE) {
 				// Boards don't work in water: stop and throw the rider off.
 				this.ejectPassengers();
 			}
@@ -347,7 +657,7 @@ public class SkateboardEntity extends VehicleEntity {
 					this.deltaRotation += this.steerRate(horizontalSpeed);
 				}
 				if (this.inputForward && surface.rideable()) {
-					accelInput = 0.075f * this.accelMultiplier() * surface.accelFactor() * (1.0f + 0.1f * bearings);
+					accelInput = 0.075f * this.accelMultiplier() * surface.accelFactor() * (1.0f + 0.1f * bearings) * this.powerSpeedMultiplier(deckPower);
 				}
 				if (this.inputBackward) {
 					motion = motion.multiply(0.88, 1.0, 0.88);
@@ -372,7 +682,7 @@ public class SkateboardEntity extends VehicleEntity {
 			double friction = surface.friction();
 			motion = new Vec3(motion.x * friction, motion.y, motion.z * friction);
 
-			double maxSpeed = MAX_BASE_SPEED * surface.maxSpeedFactor() * (1.0 + 0.08 * bearings);
+			double maxSpeed = MAX_BASE_SPEED * surface.maxSpeedFactor() * (1.0 + 0.08 * bearings) * this.powerSpeedMultiplier(deckPower);
 			double newSpeed = motion.horizontalDistance();
 			if (newSpeed > maxSpeed) {
 				double scale = maxSpeed / newSpeed;
@@ -381,7 +691,7 @@ public class SkateboardEntity extends VehicleEntity {
 
 			// Ollie.
 			if (riderControlled && this.inputJump && !this.jumpWasDown) {
-				motion = new Vec3(motion.x, 0.46, motion.z);
+				motion = new Vec3(motion.x, this.ollieImpulse(deckPower), motion.z);
 				this.playSound(Skatable.SOUND_OLLIE, 0.8f, 1.0f + this.random.nextFloat() * 0.2f);
 				this.startTrickInternal(Trick.OLLIE);
 				this.airTicks = 1;
@@ -389,6 +699,10 @@ public class SkateboardEntity extends VehicleEntity {
 		} else {
 			this.airTicks++;
 			motion = motion.multiply(0.995, 1.0, 0.995);
+			if (deckPower == DeckPower.END && riderControlled && motion.y < -0.12) {
+				// Low gravity: drift down gently.
+				motion = new Vec3(motion.x, -0.12, motion.z);
+			}
 			if (riderControlled && !Skatable.clientTricksEnabled.getAsBoolean()) {
 				// Tricks are toggled off: lean to turn mid-air instead.
 				if (this.inputLeft) {
@@ -422,6 +736,7 @@ public class SkateboardEntity extends VehicleEntity {
 			this.trickTicksLeft--;
 		}
 
+		this.preMoveMotion = this.getDeltaMovement();
 		this.move(MoverType.SELF, this.getDeltaMovement());
 		this.afterMove();
 	}
@@ -454,11 +769,24 @@ public class SkateboardEntity extends VehicleEntity {
 			}
 		}
 
-		// Crashing into a wall at speed throws the rider off and damages the board.
+		// Crashing into a wall at speed throws the rider off and damages the board
+		// (honey wallrides it, slime bounces off instead).
 		double preCollisionSpeed = new Vec3(this.xo, 0, this.zo).subtract(this.getX(), 0, this.getZ()).length();
 		if (this.horizontalCollision && this.isVehicle()) {
-			double intendedSpeed = Math.max(motion.horizontalDistance(), preCollisionSpeed);
-			if (intendedSpeed > CRASH_SPEED) {
+			DeckPower crashPower = this.power();
+			double intendedSpeed = Math.max(Math.max(motion.horizontalDistance(), preCollisionSpeed),
+					this.preMoveMotion.horizontalDistance());
+			if (crashPower == DeckPower.HONEY && this.wallrideTicks < 60 && intendedSpeed > 0.08) {
+				this.wallrideTicks++;
+				this.setDeltaMovement(this.preMoveMotion.x * 0.5, 0.12, this.preMoveMotion.z * 0.5);
+			} else if (crashPower == DeckPower.SLIME && intendedSpeed > 0.08) {
+				double nx = Math.abs(motion.x) < 1.0e-4 && Math.abs(this.preMoveMotion.x) > 1.0e-4
+						? -this.preMoveMotion.x * 0.8 : motion.x;
+				double nz = Math.abs(motion.z) < 1.0e-4 && Math.abs(this.preMoveMotion.z) > 1.0e-4
+						? -this.preMoveMotion.z * 0.8 : motion.z;
+				this.setDeltaMovement(nx, motion.y, nz);
+				this.playSound(net.minecraft.sounds.SoundEvents.SLIME_BLOCK_FALL, 0.8f, 1.0f);
+			} else if (intendedSpeed > CRASH_SPEED) {
 				this.handleCrash((float) intendedSpeed);
 			}
 		}
@@ -467,6 +795,12 @@ public class SkateboardEntity extends VehicleEntity {
 		boolean onSurface = this.onGround() || this.isGrinding();
 		if (onSurface && !this.wasOnSurface) {
 			this.handleLanding();
+			if (this.power() == DeckPower.SLIME && this.preMoveMotion.y < -0.3 && this.isVehicle()) {
+				// Bouncy landing: turn the impact back into height.
+				Vec3 current = this.getDeltaMovement();
+				this.setDeltaMovement(current.x, -this.preMoveMotion.y * 0.75, current.z);
+				this.playSound(net.minecraft.sounds.SoundEvents.SLIME_BLOCK_FALL, 0.8f, 1.1f);
+			}
 		}
 		if (this.onGround() && this.airTicks == 0 && this.activeTrick == null) {
 			this.comboCount = 0;
@@ -482,7 +816,7 @@ public class SkateboardEntity extends VehicleEntity {
 			return;
 		}
 		int tolerance = 2 + 2 * this.getGripTapeLevel();
-		boolean clean = this.trickTicksLeft <= tolerance;
+		boolean clean = this.power() == DeckPower.DIAMOND || this.trickTicksLeft <= tolerance;
 		Trick trick = this.activeTrick;
 		this.activeTrick = null;
 		this.trickTicksLeft = 0;
@@ -647,6 +981,10 @@ public class SkateboardEntity extends VehicleEntity {
 			return new Surface(false, 0.62, 0.0f, 0.3);
 		}
 		if (state.is(BlockTags.ICE)) {
+			if (this.power() == DeckPower.HONEY) {
+				// Honey grips ice like plain stone.
+				return new Surface(true, 0.99, 1.1f, 1.15);
+			}
 			return new Surface(true, 0.997, 0.9f, 1.35);
 		}
 		if (state.is(SkatableTags.SMOOTH_SURFACES)) {
@@ -678,6 +1016,30 @@ public class SkateboardEntity extends VehicleEntity {
 			}
 			return;
 		}
+		DeckPower ambientPower = this.power();
+		if (this.surgeTicks() > 0 && (ambientPower == DeckPower.REDSTONE || ambientPower == DeckPower.COPPER) && speed > 0.05) {
+			int color = ambientPower == DeckPower.REDSTONE ? 0xFF2200 : 0x22CCFF;
+			this.level().addParticle(new net.minecraft.core.particles.DustParticleOptions(color, 0.8f),
+					this.getX() - (this.getX() - this.xo) * 2.0 + (this.random.nextDouble() - 0.5) * 0.2,
+					this.getY() + 0.15,
+					this.getZ() - (this.getZ() - this.zo) * 2.0 + (this.random.nextDouble() - 0.5) * 0.2,
+					0.0, 0.01, 0.0);
+		}
+		if (ambientPower == DeckPower.MAGMA && speed > 0.08 && this.isVehicle()) {
+			this.level().addParticle(net.minecraft.core.particles.ParticleTypes.FLAME,
+					this.getX() - (this.getX() - this.xo) * 2.0,
+					this.getY() + 0.1,
+					this.getZ() - (this.getZ() - this.zo) * 2.0,
+					0.0, 0.02, 0.0);
+		}
+		if (this.dashTicks() > 0) {
+			this.level().addParticle(net.minecraft.core.particles.ParticleTypes.PORTAL,
+					this.getX(), this.getY() + 0.3, this.getZ(),
+					(this.random.nextDouble() - 0.5) * 2.0, -0.3, (this.random.nextDouble() - 0.5) * 2.0);
+		}
+		if (ambientPower == DeckPower.WOOL) {
+			return;
+		}
 		if (this.onGround() && speed > 0.08 && this.isVehicle() && Skatable.clientRollSounds.getAsBoolean()) {
 			if (this.rollSoundCooldown-- <= 0) {
 				this.rollSoundCooldown = Math.max(2, 8 - (int) (speed * 20.0));
@@ -694,6 +1056,12 @@ public class SkateboardEntity extends VehicleEntity {
 
 	@Override
 	public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource source) {
+		DeckPower power = this.power();
+		if (power == DeckPower.WOOL || power == DeckPower.SLIME || power == DeckPower.END) {
+			// Wool cushions, slime bounces, end floats: no fall damage at all.
+			this.resetFallDistance();
+			return false;
+		}
 		// The board soaks most of the fall for its rider.
 		if (fallDistance > 4.0) {
 			if (!this.level().isClientSide()) {
@@ -723,13 +1091,32 @@ public class SkateboardEntity extends VehicleEntity {
 	// ---------------------------------------------------------------- persistence
 
 	@Override
+	public boolean fireImmune() {
+		DeckPower power = this.power();
+		return power == DeckPower.NETHER || power == DeckPower.NETHERITE || power == DeckPower.MAGMA
+				|| super.fireImmune();
+	}
+
+	@Override
+	public boolean ignoreExplosion(net.minecraft.world.level.Explosion explosion) {
+		return this.power() == DeckPower.OBSIDIAN || super.ignoreExplosion(explosion);
+	}
+
+	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		output.store("BoardItem", ItemStack.CODEC, this.getBoardItem());
+		output.store("PowerData", PowerData.CODEC, this.currentPowerData());
 	}
 
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		input.read("BoardItem", ItemStack.CODEC).ifPresent(this::setBoardItem);
+		input.read("PowerData", PowerData.CODEC).ifPresent(data -> {
+			this.entityData.set(DATA_POWER_COOLDOWN, data.cooldown());
+			this.entityData.set(DATA_OXIDATION, data.oxidation());
+			this.rideTime = data.rideTime();
+			this.resonanceMeter = data.resonance();
+		});
 	}
 
 	@Override

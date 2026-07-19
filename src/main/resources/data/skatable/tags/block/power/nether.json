@@ -1,0 +1,16 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:netherrack",
+		"minecraft:basalt",
+		"minecraft:polished_basalt",
+		"minecraft:smooth_basalt",
+		"minecraft:blackstone",
+		"minecraft:polished_blackstone",
+		"minecraft:polished_blackstone_bricks",
+		"minecraft:nether_bricks",
+		"minecraft:red_nether_bricks",
+		"minecraft:crimson_nylium",
+		"minecraft:warped_nylium"
+	]
+}

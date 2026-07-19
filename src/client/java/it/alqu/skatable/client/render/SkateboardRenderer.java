@@ -52,7 +52,7 @@ public class SkateboardRenderer extends EntityRenderer<SkateboardEntity, Skatebo
 			state.trick = null;
 			state.trickProgress = 0.0f;
 		}
-		this.blockModelResolver.update(state.deckModel, entity.getDeckBlock().defaultBlockState(), BLOCK_DISPLAY_CONTEXT);
+		this.blockModelResolver.update(state.deckModel, entity.visualDeckBlock().defaultBlockState(), BLOCK_DISPLAY_CONTEXT);
 	}
 
 	@Override

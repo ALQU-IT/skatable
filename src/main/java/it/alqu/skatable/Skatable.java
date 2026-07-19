@@ -49,6 +49,13 @@ public class Skatable implements ModInitializer {
 			.networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.registry(Registries.BLOCK))
 			.build();
 
+	// Persistent deck-power state (cooldown, copper oxidation, amethyst resonance).
+	public static final DataComponentType<it.alqu.skatable.power.PowerData> POWER_DATA_COMPONENT =
+			DataComponentType.<it.alqu.skatable.power.PowerData>builder()
+					.persistent(it.alqu.skatable.power.PowerData.CODEC)
+					.networkSynchronized(it.alqu.skatable.power.PowerData.STREAM_CODEC)
+					.build();
+
 	public static final ResourceKey<Item> SKATEBOARD_ITEM_KEY = ResourceKey.create(Registries.ITEM, id("skateboard"));
 	public static final SkateboardItem SKATEBOARD_ITEM = new SkateboardItem(new Item.Properties()
 			.setId(SKATEBOARD_ITEM_KEY)
@@ -83,7 +90,9 @@ public class Skatable implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		SkatableCommonConfig.get();
 		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, id("deck"), DECK_COMPONENT);
+		Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, id("power_data"), POWER_DATA_COMPONENT);
 		Registry.register(BuiltInRegistries.ITEM, SKATEBOARD_ITEM_KEY, SKATEBOARD_ITEM);
 		Registry.register(BuiltInRegistries.ENTITY_TYPE, SKATEBOARD_ENTITY_KEY, SKATEBOARD_ENTITY);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("crafting_skateboard"), SKATEBOARD_RECIPE_SERIALIZER);

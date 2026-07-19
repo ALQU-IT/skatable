@@ -81,6 +81,45 @@ override the defaults when bound).
 off, **A**/**D** lean-turn the board mid-air instead of flipping it — better for pure
 transport. Grinding still works either way. The choice is remembered across restarts.
 
+## Deck Powers
+
+Every deck material except plain planks grants an ability. Families are tag-driven
+(`data/skatable/tags/block/power/*.json` — datapacks can reassign families or add modded
+blocks); signature blocks override their family. The item tooltip shows each board's
+power. Actives fire with **R** while riding (rebindable), with a cooldown bar above the
+hotbar. Powers only work while someone is actually riding.
+
+| Deck | Power |
+|---|---|
+| Stone / deepslate / cobblestone... | **Stonework** — +30% durability, knockback resistance while riding |
+| Concrete (any color) | **Street Formula** — +15% top speed everywhere |
+| Wool (any color) | **Wool Muffle** — silent riding, no fall damage while mounted |
+| Ice family | **Frost Trail** — freezes water under you; skate across lakes |
+| Glass (any) | **Ghost Glass** — mobs detect you at much shorter range |
+| Terracotta / glazed | **Kiln Grip** — grinds pay double XP |
+| Iron block | **Battering Board** — ram mobs at speed instead of stopping |
+| Gold block | **Bling** — piglin-safe; landed tricks drop bonus XP orbs |
+| Copper block | **Conductor** — oxidizes visually with ride time; storm lightning supercharges (+50% speed, 60s) |
+| Netherrack / basalt / blackstone | **Hellbent** — fire immunity; skim lava up to 2s (sizzle warning) |
+| Obsidian / crying obsidian | **Blastproof** — explosions can't destroy the board or dismount you |
+| Prismarine family | **Tideglider** — full-speed sea-floor riding with water breathing |
+| Sculk | **Echolocation** — nearby mobs glow while you ride |
+| Purpur / end stone | **Voidstep** — 2-block ollies, gentle descents |
+| Diamond block | **Flawless** — tricks always land clean; +25% trick XP |
+| Netherite block | **Unbreakable** — 3x durability, rides lava indefinitely, fireproof item |
+| Emerald block | **Crowd Favorite** — tricks near villagers grant Hero of the Village |
+| Redstone block | **Boost** *(R)* — 3s double speed, redstone exhaust, 15s cooldown |
+| Slime block | **Bounceback** — bounces off walls and landings, keeps momentum |
+| Honey block | **Sticky Trucks** — wallride up to 3 blocks; never slips on ice |
+| TNT | **Eject** *(R)* — explosive launch skyward, 20 durability, 30s cooldown |
+| Magma block | **Scorcher** — burning trail ignites whatever touches it |
+| Amethyst block | **Resonance** — tricks chime and charge a meter; full meter = 30s of higher ollies |
+| Dragon egg | **Voidwalk** *(R)* — teleport-dash 5 blocks forward through walls, 20s cooldown |
+
+Power state (cooldowns, oxidation, resonance) persists on the item across pickup and
+restarts. Server admins can disable any power via `config/skatable.json`
+(`"disabledPowers": ["copper", "tnt", ...]`) — the list syncs to clients on join.
+
 ## Enchanting & repair
 
 The skateboard accepts **Unbreaking** and **Mending**, plus two custom enchantments

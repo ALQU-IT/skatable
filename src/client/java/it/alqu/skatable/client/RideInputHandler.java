@@ -23,16 +23,18 @@ public class RideInputHandler {
 	private final KeyMapping shoveItKey;
 	private final KeyMapping spinKey;
 	private final KeyMapping toggleTricksKey;
+	private final KeyMapping powerKey;
 
 	private Input lastInput = Input.EMPTY;
 
 	public RideInputHandler(KeyMapping kickflipKey, KeyMapping heelflipKey, KeyMapping shoveItKey, KeyMapping spinKey,
-			KeyMapping toggleTricksKey) {
+			KeyMapping toggleTricksKey, KeyMapping powerKey) {
 		this.kickflipKey = kickflipKey;
 		this.heelflipKey = heelflipKey;
 		this.shoveItKey = shoveItKey;
 		this.spinKey = spinKey;
 		this.toggleTricksKey = toggleTricksKey;
+		this.powerKey = powerKey;
 	}
 
 	public void tick(Minecraft minecraft) {
@@ -51,6 +53,17 @@ public class RideInputHandler {
 		if (!(player.getVehicle() instanceof SkateboardEntity board) || board.getControllingPassenger() != player) {
 			this.lastInput = Input.EMPTY;
 			return;
+		}
+
+		while (this.powerKey.consumeClick()) {
+			var power = board.power();
+			if (power.isActive()) {
+				if (board.powerCooldown() > 0) {
+					TrickHudNotifier.onPowerOnCooldown(board.powerCooldown());
+				} else {
+					it.alqu.skatable.net.SkatableNet.sendActivatePower();
+				}
+			}
 		}
 
 		Input input = player.input.keyPresses;

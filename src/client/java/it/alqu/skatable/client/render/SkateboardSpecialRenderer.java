@@ -38,7 +38,8 @@ public class SkateboardSpecialRenderer implements SpecialModelRenderer<Block> {
 
 	@Override
 	public Block extractArgument(ItemStack stack) {
-		return SkateboardItem.deckOf(stack);
+		return it.alqu.skatable.power.DeckPowers.oxidizedVisual(
+				SkateboardItem.deckOf(stack), SkateboardItem.powerData(stack).oxidation());
 	}
 
 	@Override

@@ -9,6 +9,8 @@ public final class SkatableTags {
 	public static final TagKey<Item> SKATEBOARDS = TagKey.create(Registries.ITEM, Skatable.id("skateboards"));
 	/** Blocks that may never be used as a deck, even if they are full cubes. */
 	public static final TagKey<Block> DECK_BLACKLIST = TagKey.create(Registries.BLOCK, Skatable.id("deck_blacklist"));
+	/** Blocks always allowed as decks, bypassing the shape/gravity checks (dragon egg, honey...). */
+	public static final TagKey<Block> DECK_WHITELIST = TagKey.create(Registries.BLOCK, Skatable.id("deck_whitelist"));
 	/** Fast riding surfaces (stone-like, concrete, ...). Ice gets an extra boost in code. */
 	public static final TagKey<Block> SMOOTH_SURFACES = TagKey.create(Registries.BLOCK, Skatable.id("smooth_surfaces"));
 	/** Slow riding surfaces (dirt, grass, mud, ...). */

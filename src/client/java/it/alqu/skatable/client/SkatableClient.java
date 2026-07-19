@@ -45,8 +45,10 @@ public class SkatableClient implements ClientModInitializer {
 		KeyMapping spin = register("spin_360", category);
 		KeyMapping toggleTricks = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.skatable.toggle_tricks", org.lwjgl.glfw.GLFW.GLFW_KEY_G, category));
+		KeyMapping powerKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+				"key.skatable.power", org.lwjgl.glfw.GLFW.GLFW_KEY_R, category));
 
-		RideInputHandler inputHandler = new RideInputHandler(kickflip, heelflip, shoveIt, spin, toggleTricks);
+		RideInputHandler inputHandler = new RideInputHandler(kickflip, heelflip, shoveIt, spin, toggleTricks, powerKey);
 		ClientTickEvents.END_CLIENT_TICK.register(inputHandler::tick);
 
 		// Networking: the common code calls into this sender on the client side,
@@ -70,6 +72,9 @@ public class SkatableClient implements ClientModInitializer {
 				ClientPlayNetworking.send(payload);
 			}
 		};
+
+		ClientPlayNetworking.registerGlobalReceiver(SkatableNet.DisabledPowersPayload.TYPE, (payload, context) ->
+				it.alqu.skatable.power.DeckPowers.setDisabled(payload.ids()));
 
 		ClientPlayNetworking.registerGlobalReceiver(SkatableNet.TrickAnimPayload.TYPE, (payload, context) -> {
 			if (context.client().level != null

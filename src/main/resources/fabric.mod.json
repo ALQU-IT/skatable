@@ -22,6 +22,7 @@
 		]
 	},
 	"mixins": [
+		"skatable.mixins.json",
 		{
 			"config": "skatable.client.mixins.json",
 			"environment": "client"

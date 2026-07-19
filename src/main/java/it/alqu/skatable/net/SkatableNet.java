@@ -66,6 +66,35 @@ public final class SkatableNet {
 		}
 	}
 
+	/** R key pressed while riding: run the board's active power. */
+	public record ActivatePowerPayload(byte marker) implements CustomPacketPayload {
+		public static final CustomPacketPayload.Type<ActivatePowerPayload> TYPE = new CustomPacketPayload.Type<>(Skatable.id("activate_power"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ActivatePowerPayload> CODEC =
+				StreamCodec.composite(ByteBufCodecs.BYTE, ActivatePowerPayload::marker, ActivatePowerPayload::new);
+
+		public ActivatePowerPayload() {
+			this((byte) 0);
+		}
+
+		@Override
+		public CustomPacketPayload.Type<ActivatePowerPayload> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client on join: which deck powers the admin has disabled. */
+	public record DisabledPowersPayload(java.util.List<String> ids) implements CustomPacketPayload {
+		public static final CustomPacketPayload.Type<DisabledPowersPayload> TYPE = new CustomPacketPayload.Type<>(Skatable.id("disabled_powers"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DisabledPowersPayload> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), DisabledPowersPayload::ids,
+				DisabledPowersPayload::new);
+
+		@Override
+		public CustomPacketPayload.Type<DisabledPowersPayload> type() {
+			return TYPE;
+		}
+	}
+
 	public record TrickAnimPayload(int entityId, int trickOrdinal) implements CustomPacketPayload {
 		public static final CustomPacketPayload.Type<TrickAnimPayload> TYPE = new CustomPacketPayload.Type<>(Skatable.id("trick_anim"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, TrickAnimPayload> CODEC = StreamCodec.composite(
@@ -84,7 +113,9 @@ public final class SkatableNet {
 		PayloadTypeRegistry.serverboundPlay().register(TrickResultPayload.TYPE, TrickResultPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(GrindPayload.TYPE, GrindPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CrashPayload.TYPE, CrashPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ActivatePowerPayload.TYPE, ActivatePowerPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TrickAnimPayload.TYPE, TrickAnimPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DisabledPowersPayload.TYPE, DisabledPowersPayload.CODEC);
 	}
 
 	public static void registerServerHandlers() {
@@ -113,11 +144,42 @@ public final class SkatableNet {
 			Trick trick = Trick.byOrdinal(payload.trickOrdinal());
 			int combo = Mth.clamp(payload.combo(), 1, 20);
 			if (payload.success()) {
+				var power = board.power();
 				int xp = Math.round(trick.xp() * (1.0f + 0.5f * (combo - 1)));
+				if (trick == Trick.GRIND && power == it.alqu.skatable.power.DeckPower.TERRACOTTA) {
+					xp *= 2;
+				}
+				if (power == it.alqu.skatable.power.DeckPower.DIAMOND) {
+					xp = Math.round(xp * 1.25f);
+				}
 				context.player().giveExperiencePoints(xp);
 				var serverLevel = (net.minecraft.server.level.ServerLevel) board.level();
 				serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.CRIT,
 						board.getX(), board.getY() + 0.3, board.getZ(), 8, 0.3, 0.2, 0.3, 0.15);
+				switch (power) {
+					case GOLD -> net.minecraft.world.entity.ExperienceOrb.award(serverLevel, board.position(),
+							1 + serverLevel.getRandom().nextInt(2));
+					case EMERALD -> {
+						var villagers = serverLevel.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class,
+								board.getBoundingBox().inflate(8.0));
+						if (!villagers.isEmpty()) {
+							for (var villager : villagers) {
+								serverLevel.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER,
+										villager.getX(), villager.getY() + 1.8, villager.getZ(), 5, 0.3, 0.3, 0.3, 0.02);
+							}
+							context.player().addEffect(new net.minecraft.world.effect.MobEffectInstance(
+									net.minecraft.world.effect.MobEffects.HERO_OF_THE_VILLAGE, 600, 0, true, false));
+						}
+					}
+					case AMETHYST -> {
+						board.level().playSound(null, board.getX(), board.getY(), board.getZ(),
+								net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME, board.getSoundSource(),
+								1.0f, 0.7f + 0.15f * Math.min(combo, 6));
+						board.addResonance(25);
+					}
+					default -> {
+					}
+				}
 			} else {
 				// Bail: the client already dismounted locally; make it authoritative
 				// server-side too, otherwise the player can never remount.
@@ -132,6 +194,17 @@ public final class SkatableNet {
 				board.setGrindingFromNetwork(payload.grinding());
 			}
 		});
+
+		ServerPlayNetworking.registerGlobalReceiver(ActivatePowerPayload.TYPE, (payload, context) -> {
+			SkateboardEntity board = ridingBoard(context.player());
+			if (board != null) {
+				board.tryActivatePower(context.player());
+			}
+		});
+
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+				sender.sendPacket(new DisabledPowersPayload(
+						java.util.List.copyOf(it.alqu.skatable.power.DeckPowers.disabledIds()))));
 
 		ServerPlayNetworking.registerGlobalReceiver(CrashPayload.TYPE, (payload, context) -> {
 			SkateboardEntity board = ridingBoard(context.player());
@@ -185,6 +258,10 @@ public final class SkatableNet {
 
 	public static void sendCrash(float speed) {
 		clientSender.send(new CrashPayload(speed));
+	}
+
+	public static void sendActivatePower() {
+		clientSender.send(new ActivatePowerPayload());
 	}
 
 	private SkatableNet() {

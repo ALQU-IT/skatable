@@ -14,6 +14,10 @@ public final class TrickHudNotifier {
 		TrickHud.show(I18n.get(Trick.GRIND.translationKey()) + "!", "", 1200);
 	}
 
+	public static void onPowerOnCooldown(int ticks) {
+		TrickHud.show(I18n.get("hud.skatable.power_cooldown", (ticks + 19) / 20), "", 900);
+	}
+
 	public static void onTricksToggled(boolean enabled) {
 		TrickHud.show(I18n.get(enabled ? "hud.skatable.tricks_on" : "hud.skatable.tricks_off"), "", 1500);
 	}
