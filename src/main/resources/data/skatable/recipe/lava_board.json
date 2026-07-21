@@ -1,0 +1,5 @@
+{
+	"type": "skatable:crafting_fluid_board",
+	"bucket": "minecraft:lava_bucket",
+	"deck": "minecraft:lava"
+}

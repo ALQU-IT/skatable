@@ -34,7 +34,10 @@ public enum DeckPower {
 	TNT(true, 600),
 	MAGMA(false, 0),
 	AMETHYST(false, 0),
-	DRAGON(true, 400);
+	DRAGON(true, 400),
+	// Fluid decks (crafted from buckets).
+	WATER(false, 0),
+	LAVA(false, 0);
 
 	private final boolean active;
 	private final int cooldownTicks;

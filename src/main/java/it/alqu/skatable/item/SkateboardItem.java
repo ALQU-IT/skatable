@@ -84,7 +84,11 @@ public class SkateboardItem extends Item {
 		DeckStats stats = statsFor(block);
 		stack.set(Skatable.DECK_COMPONENT, block);
 		stack.set(DataComponents.MAX_DAMAGE, stats.maxDamage());
-		stack.set(DataComponents.REPAIRABLE, new Repairable(HolderSet.direct(block.asItem().builtInRegistryHolder())));
+		// Fluid decks (water/lava) have no block item, so repair them with the matching bucket.
+		Item repairItem = block == Blocks.WATER ? net.minecraft.world.item.Items.WATER_BUCKET
+				: block == Blocks.LAVA ? net.minecraft.world.item.Items.LAVA_BUCKET
+				: block.asItem();
+		stack.set(DataComponents.REPAIRABLE, new Repairable(HolderSet.direct(repairItem.builtInRegistryHolder())));
 	}
 
 	public static PowerData powerData(ItemStack stack) {

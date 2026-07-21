@@ -74,6 +74,9 @@ public class Skatable implements ModInitializer {
 	public static final RecipeSerializer<SkateboardRecipe> SKATEBOARD_RECIPE_SERIALIZER =
 			new RecipeSerializer<>(SkateboardRecipe.MAP_CODEC, SkateboardRecipe.STREAM_CODEC);
 
+	public static final RecipeSerializer<it.alqu.skatable.recipe.FluidBoardRecipe> FLUID_BOARD_RECIPE_SERIALIZER =
+			new RecipeSerializer<>(it.alqu.skatable.recipe.FluidBoardRecipe.MAP_CODEC, it.alqu.skatable.recipe.FluidBoardRecipe.STREAM_CODEC);
+
 	public static final ResourceKey<Enchantment> GRIP_TAPE = ResourceKey.create(Registries.ENCHANTMENT, id("grip_tape"));
 	public static final ResourceKey<Enchantment> SWIFT_BEARINGS = ResourceKey.create(Registries.ENCHANTMENT, id("swift_bearings"));
 
@@ -96,6 +99,7 @@ public class Skatable implements ModInitializer {
 		Registry.register(BuiltInRegistries.ITEM, SKATEBOARD_ITEM_KEY, SKATEBOARD_ITEM);
 		Registry.register(BuiltInRegistries.ENTITY_TYPE, SKATEBOARD_ENTITY_KEY, SKATEBOARD_ENTITY);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("crafting_skateboard"), SKATEBOARD_RECIPE_SERIALIZER);
+		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("crafting_fluid_board"), FLUID_BOARD_RECIPE_SERIALIZER);
 		for (SoundEvent event : new SoundEvent[] { SOUND_OLLIE, SOUND_LAND, SOUND_GRIND, SOUND_CRASH, SOUND_BREAK, SOUND_TRICK }) {
 			Registry.register(BuiltInRegistries.SOUND_EVENT, event.location(), event);
 		}
@@ -104,6 +108,8 @@ public class Skatable implements ModInitializer {
 			output.accept(SkateboardItem.forDeck(Blocks.OAK_PLANKS), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
 			output.accept(SkateboardItem.forDeck(Blocks.STONE), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
 			output.accept(SkateboardItem.forDeck(Blocks.DIAMOND_BLOCK), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+			output.accept(SkateboardItem.forDeck(Blocks.WATER), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+			output.accept(SkateboardItem.forDeck(Blocks.LAVA), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
 		});
 
 		SkatableNet.registerCommon();

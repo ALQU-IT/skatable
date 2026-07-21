@@ -78,5 +78,9 @@
 	"power.skatable.amethyst.name": "Resonance",
 	"power.skatable.amethyst.desc": "Tricks chime and build resonance; a full meter boosts ollie height for 30s",
 	"power.skatable.dragon.name": "Voidwalk",
-	"power.skatable.dragon.desc": "[R] Teleport-dash 5 blocks forward, even through walls — 20s cooldown"
+	"power.skatable.dragon.desc": "[R] Teleport-dash 5 blocks forward, even through walls — 20s cooldown",
+	"power.skatable.water.name": "Aqua Deck",
+	"power.skatable.water.desc": "Surf on water and ride underwater; water breathing while mounted",
+	"power.skatable.lava.name": "Magma Deck",
+	"power.skatable.lava.desc": "Ride lava and water; fire immune; paves a 2x2 obsidian trail over water"
 }

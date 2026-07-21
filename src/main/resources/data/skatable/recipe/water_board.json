@@ -1,0 +1,5 @@
+{
+	"type": "skatable:crafting_fluid_board",
+	"bucket": "minecraft:water_bucket",
+	"deck": "minecraft:water"
+}

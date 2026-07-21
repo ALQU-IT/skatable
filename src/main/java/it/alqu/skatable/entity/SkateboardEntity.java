@@ -296,13 +296,16 @@ public class SkateboardEntity extends VehicleEntity {
 					this.entityData.set(DATA_SURGE_TICKS, 1200);
 				}
 			}
-			case NETHER, NETHERITE -> {
+			case NETHER, NETHERITE, LAVA -> {
 				if (rider instanceof LivingEntity living) {
 					living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
 							net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 60, 0, true, false));
 				}
+				if (power == DeckPower.LAVA) {
+					this.obsidianTrail(serverLevel);
+				}
 			}
-			case PRISMARINE -> {
+			case PRISMARINE, WATER -> {
 				if (rider instanceof LivingEntity living) {
 					living.addEffect(new net.minecraft.world.effect.MobEffectInstance(
 							net.minecraft.world.effect.MobEffects.WATER_BREATHING, 60, 0, true, false));
@@ -353,6 +356,25 @@ public class SkateboardEntity extends VehicleEntity {
 				if (state.is(net.minecraft.world.level.block.Blocks.WATER) && state.getFluidState().isSource()
 						&& serverLevel.getBlockState(pos.above()).isAir()) {
 					serverLevel.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.FROSTED_ICE.defaultBlockState());
+				}
+			}
+		}
+	}
+
+	/** Lava deck riding on water paves a 2x2 obsidian trail beneath it. */
+	private void obsidianTrail(ServerLevel serverLevel) {
+		if (!this.wasTouchingWater) {
+			return;
+		}
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		for (int dx = 0; dx <= 1; dx++) {
+			for (int dz = 0; dz <= 1; dz++) {
+				pos.set(Mth.floor(this.getX()) + dx - 1, Mth.floor(this.getY() - 0.1), Mth.floor(this.getZ()) + dz - 1);
+				BlockState state = serverLevel.getBlockState(pos);
+				if (state.getFluidState().is(FluidTags.WATER) && state.getFluidState().isSource()) {
+					serverLevel.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState());
+					serverLevel.playSound(null, pos, net.minecraft.sounds.SoundEvents.LAVA_EXTINGUISH,
+							this.getSoundSource(), 0.4f, 1.2f);
 				}
 			}
 		}
@@ -627,22 +649,32 @@ public class SkateboardEntity extends VehicleEntity {
 		double horizontalSpeed = motion.horizontalDistance();
 		Surface surface = this.surfaceBelow();
 
-		// Fluid powers: nether/netherite skim lava, ice skims onto its own frost trail.
+		// Fluid powers: nether/netherite/lava skim lava, ice/water/lava skim water.
 		if (this.isInLava() && riderControlled
-				&& (deckPower == DeckPower.NETHERITE || deckPower == DeckPower.NETHER && this.lavaTicks < 40)) {
+				&& (deckPower == DeckPower.NETHERITE || deckPower == DeckPower.LAVA
+						|| deckPower == DeckPower.NETHER && this.lavaTicks < 40)) {
 			this.lavaTicks++;
 			if (deckPower == DeckPower.NETHER && this.lavaTicks == 30) {
 				this.playSound(net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, 1.0f, 0.8f);
 			}
 			motion = new Vec3(motion.x * 0.99, Math.max(motion.y, 0.06), motion.z * 0.99);
 		}
-		if (this.wasTouchingWater && riderControlled && deckPower == DeckPower.ICE && horizontalSpeed > 0.08) {
+		if (this.wasTouchingWater && riderControlled
+				&& (deckPower == DeckPower.ICE || deckPower == DeckPower.LAVA) && horizontalSpeed > 0.08) {
 			motion = new Vec3(motion.x, Math.max(motion.y, 0.08), motion.z);
+		}
+		if (this.wasTouchingWater && riderControlled && deckPower == DeckPower.WATER) {
+			// Water deck surfs the top, but lets you dive: neutral buoyancy when submerged.
+			boolean submerged = this.level().getFluidState(this.blockPosition().above()).is(FluidTags.WATER);
+			motion = submerged
+					? new Vec3(motion.x, motion.y * 0.6, motion.z)
+					: new Vec3(motion.x, Math.max(motion.y, 0.06), motion.z);
 		}
 
 		if (this.onGround()) {
 			this.airTicks = 0;
-			if (this.wasTouchingWater && deckPower != DeckPower.PRISMARINE && deckPower != DeckPower.ICE) {
+			if (this.wasTouchingWater && deckPower != DeckPower.PRISMARINE && deckPower != DeckPower.ICE
+					&& deckPower != DeckPower.WATER && deckPower != DeckPower.LAVA) {
 				// Boards don't work in water: stop and throw the rider off.
 				this.ejectPassengers();
 			}
@@ -1094,7 +1126,7 @@ public class SkateboardEntity extends VehicleEntity {
 	public boolean fireImmune() {
 		DeckPower power = this.power();
 		return power == DeckPower.NETHER || power == DeckPower.NETHERITE || power == DeckPower.MAGMA
-				|| super.fireImmune();
+				|| power == DeckPower.LAVA || super.fireImmune();
 	}
 
 	@Override

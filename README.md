@@ -115,6 +115,13 @@ hotbar. Powers only work while someone is actually riding.
 | Magma block | **Scorcher** — burning trail ignites whatever touches it |
 | Amethyst block | **Resonance** — tricks chime and charge a meter; full meter = 30s of higher ollies |
 | Dragon egg | **Voidwalk** *(R)* — teleport-dash 5 blocks forward through walls, 20s cooldown |
+| Water (bucket) | **Aqua Deck** — surf on water *and* ride underwater, with water breathing |
+| Lava (bucket) | **Magma Deck** — ride lava and water, fire immune; paves a 2×2 obsidian trail over water |
+
+The **water** and **lava** boards are crafted differently, since fluids aren't blocks:
+combine any existing skateboard with a **water bucket** or **lava bucket** (shapeless) —
+the emptied bucket is left in the grid, so you get it back. They show up as blue-ice /
+magma-block visuals (fluids have no in-hand model of their own).
 
 Power state (cooldowns, oxidation, resonance) persists on the item across pickup and
 restarts. Server admins can disable any power via `config/skatable.json`

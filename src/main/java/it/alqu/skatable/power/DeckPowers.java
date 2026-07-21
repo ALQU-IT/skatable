@@ -33,6 +33,8 @@ public final class DeckPowers {
 		SIGNATURE.put(Blocks.MAGMA_BLOCK, DeckPower.MAGMA);
 		SIGNATURE.put(Blocks.AMETHYST_BLOCK, DeckPower.AMETHYST);
 		SIGNATURE.put(Blocks.DRAGON_EGG, DeckPower.DRAGON);
+		SIGNATURE.put(Blocks.WATER, DeckPower.WATER);
+		SIGNATURE.put(Blocks.LAVA, DeckPower.LAVA);
 
 		FAMILIES = List.of(
 				family("stone", DeckPower.STONE),
@@ -106,6 +108,13 @@ public final class DeckPowers {
 	};
 
 	public static Block oxidizedVisual(Block deck, int stage) {
+		// Fluid decks have no block model, so render a stand-in that reads as water/lava.
+		if (deck == Blocks.WATER) {
+			return Blocks.BLUE_ICE;
+		}
+		if (deck == Blocks.LAVA) {
+			return Blocks.MAGMA_BLOCK;
+		}
 		if (stage <= 0 || deck != copperStage(0)) {
 			return deck;
 		}
