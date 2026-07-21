@@ -649,6 +649,18 @@ public class SkateboardEntity extends VehicleEntity {
 		double horizontalSpeed = motion.horizontalDistance();
 		Surface surface = this.surfaceBelow();
 
+		// A fluid-capable deck floating on its fluid is treated like being on the
+		// ground, so pushing, steering and friction all work on the surface.
+		boolean onFluidSurface = riderControlled && !this.onGround() && (
+				(this.wasTouchingWater
+						&& (deckPower == DeckPower.WATER || deckPower == DeckPower.ICE || deckPower == DeckPower.LAVA))
+				|| (this.isInLava()
+						&& (deckPower == DeckPower.LAVA || deckPower == DeckPower.NETHERITE
+								|| deckPower == DeckPower.NETHER && this.lavaTicks <= 40)));
+		if (onFluidSurface) {
+			surface = new Surface(true, 0.985, 1.0f, 1.05);
+		}
+
 		// Fluid powers: nether/netherite/lava skim lava, ice/water/lava skim water.
 		if (this.isInLava() && riderControlled
 				&& (deckPower == DeckPower.NETHERITE || deckPower == DeckPower.LAVA
@@ -671,9 +683,9 @@ public class SkateboardEntity extends VehicleEntity {
 					: new Vec3(motion.x, Math.max(motion.y, 0.06), motion.z);
 		}
 
-		if (this.onGround()) {
+		if (this.onGround() || onFluidSurface) {
 			this.airTicks = 0;
-			if (this.wasTouchingWater && deckPower != DeckPower.PRISMARINE && deckPower != DeckPower.ICE
+			if (this.onGround() && this.wasTouchingWater && deckPower != DeckPower.PRISMARINE && deckPower != DeckPower.ICE
 					&& deckPower != DeckPower.WATER && deckPower != DeckPower.LAVA) {
 				// Boards don't work in water: stop and throw the rider off.
 				this.ejectPassengers();

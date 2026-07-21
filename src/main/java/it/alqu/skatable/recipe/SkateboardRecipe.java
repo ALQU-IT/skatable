@@ -3,6 +3,7 @@ package it.alqu.skatable.recipe;
 import com.mojang.serialization.MapCodec;
 import it.alqu.skatable.Skatable;
 import it.alqu.skatable.item.SkateboardItem;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.BlockItem;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 /**
  * Shape (in a 3x3 grid, top row empty):
@@ -49,9 +51,10 @@ public class SkateboardRecipe extends CustomRecipe {
 				|| !input.getItem(2, 0).is(Items.IRON_INGOT)) {
 			return null;
 		}
-		// Row 1: three matching deck blocks.
+		// Row 1: three matching deck items (full blocks, or water/lava buckets).
 		ItemStack first = input.getItem(0, 1);
-		if (!SkateboardItem.isValidDeckItem(first)) {
+		Block deck = deckBlockFor(first);
+		if (deck == null) {
 			return null;
 		}
 		for (int x = 1; x < 3; x++) {
@@ -60,7 +63,34 @@ public class SkateboardRecipe extends CustomRecipe {
 				return null;
 			}
 		}
-		return ((BlockItem) first.getItem()).getBlock();
+		return deck;
+	}
+
+	/** The deck block an item represents: fluid buckets map to water/lava, block items to their block. */
+	private static Block deckBlockFor(ItemStack stack) {
+		if (stack.is(Items.WATER_BUCKET)) {
+			return Blocks.WATER;
+		}
+		if (stack.is(Items.LAVA_BUCKET)) {
+			return Blocks.LAVA;
+		}
+		if (SkateboardItem.isValidDeckItem(stack)) {
+			return ((BlockItem) stack.getItem()).getBlock();
+		}
+		return null;
+	}
+
+	@Override
+	public NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+		// Fluid decks empty their buckets rather than consuming them.
+		NonNullList<ItemStack> remaining = NonNullList.withSize(input.size(), ItemStack.EMPTY);
+		for (int slot = 0; slot < input.size(); slot++) {
+			ItemStack stack = input.getItem(slot);
+			if (stack.is(Items.WATER_BUCKET) || stack.is(Items.LAVA_BUCKET)) {
+				remaining.set(slot, new ItemStack(Items.BUCKET));
+			}
+		}
+		return remaining;
 	}
 
 	@Override

@@ -118,10 +118,18 @@ hotbar. Powers only work while someone is actually riding.
 | Water (bucket) | **Aqua Deck** — surf on water *and* ride underwater, with water breathing |
 | Lava (bucket) | **Magma Deck** — ride lava and water, fire immune; paves a 2×2 obsidian trail over water |
 
-The **water** and **lava** boards are crafted differently, since fluids aren't blocks:
-combine any existing skateboard with a **water bucket** or **lava bucket** (shapeless) —
-the emptied bucket is left in the grid, so you get it back. They show up as blue-ice /
-magma-block visuals (fluids have no in-hand model of their own).
+The **water** and **lava** boards use the *same recipe shape as any board* — just put
+three **water buckets** or three **lava buckets** in the deck row instead of blocks:
+
+```
+· · ·
+I · I     I = iron ingot
+W W W     W = 3 water buckets  (or 3 lava buckets)
+```
+
+The emptied buckets are returned to the grid, so they're retrievable. (You can also
+upgrade an existing skateboard by crafting it together with a single water/lava bucket.)
+Fluids have no in-hand model, so these render as blue-ice / magma-block stand-ins.
 
 Power state (cooldowns, oxidation, resonance) persists on the item across pickup and
 restarts. Server admins can disable any power via `config/skatable.json`
