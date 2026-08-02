@@ -19,4 +19,23 @@ import net.fabricmc.fabric.api.client.rendering.v1.RenderStateDataKey;
 public record SkateRideState(float leanDegrees, float speed, boolean grinding, boolean airborne,
 		Trick trick, float trickTime, boolean goofy) {
 	public static final RenderStateDataKey<SkateRideState> KEY = RenderStateDataKey.create();
+
+	/**
+	 * Total knee bend, in radians, handed to the leg mesh. The front leg carries
+	 * the deeper bend; both deepen as the rider crouches.
+	 */
+	public float bend(boolean front) {
+		float crouch = Math.min(0.3f + 0.4f * Math.min(this.speed / 0.7f, 1.0f)
+				+ (this.grinding ? 0.3f : 0.0f), 1.0f);
+		float total = (float) Math.toRadians(22.0 + 48.0 * crouch);
+		return front ? total : total * 0.7f;
+	}
+
+	public float leftLegBend() {
+		return this.bend(!this.goofy);
+	}
+
+	public float rightLegBend() {
+		return this.bend(this.goofy);
+	}
 }

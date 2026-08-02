@@ -69,14 +69,16 @@ stance with genuinely bent knees, arms out for balance, leaning into carves, cro
 lower the faster you go, tucking during tricks, and a wobble while grinding. Each player
 is consistently **regular or goofy** (derived from their UUID).
 
-The vanilla player leg is one rigid cuboid with no knee, so the mod slices each leg into
-four stacked segments (reusing the leg's own skin region, overlay layers included) and
-spreads the bend across them, weighted to peak at the knee. Minecraft has no vertex
-skinning, so this approximates a curve rather than truly deforming the mesh — but the
-texture stays continuous and there is no hard break at a single hinge. The slices are
-hidden entirely unless the rider is skating. Tuning constants live at the top of
-`PlayerModelMixin.skatable$skatePose` (stance, lean, crouch, knee flex) and in
-`BEND_WEIGHTS` / `SkatePartNames.SEGMENTS`.
+`ModelPart` can only draw rigid boxes, so bending a leg through the model system either
+snaps it in half or turns it into a string of sausages. Instead the vanilla legs are
+hidden while riding and `SkateLegLayer` emits the geometry directly: the leg is swept
+along a curved centreline as a stack of quad rings, with the skin's UV coordinates
+advancing continuously down the sweep, so the texture genuinely stretches around the
+bend. Tuning lives in `SkateLegLayer` (`RINGS`, the curvature bell) and
+`SkateRideState.bend`.
+
+*Caveat:* leg armour renders from its own rigid model and will not follow the curve, so
+riders wearing leggings will see them clip.
 
 This is built into the mod — no Emotecraft or Essential needed, and other players see
 the stance too, since it's driven by the board state that's already synced.

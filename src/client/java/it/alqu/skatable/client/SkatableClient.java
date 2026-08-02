@@ -33,6 +33,14 @@ public class SkatableClient implements ClientModInitializer {
 		SpecialModelRenderersAccessor.skatable$getIdMapper()
 				.put(Skatable.id("skateboard"), SkateboardSpecialRenderer.Unbaked.MAP_CODEC);
 
+		// Deforming legs for skateboarders, drawn instead of the rigid vanilla ones.
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register(
+				(entityType, entityRenderer, registrationHelper, context) -> {
+					if (entityRenderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatarRenderer) {
+						registrationHelper.register(new it.alqu.skatable.client.render.SkateLegLayer(avatarRenderer));
+					}
+				});
+
 		// HUD.
 		HudElementRegistry.addLast(Skatable.id("trick_hud"), new TrickHud());
 

@@ -1,7 +1,6 @@
 package it.alqu.skatable.client.mixin;
 
 import it.alqu.skatable.Trick;
-import it.alqu.skatable.client.render.SkatePartNames;
 import it.alqu.skatable.client.render.SkateRideState;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -30,49 +29,28 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 	private static final float DEG = (float) (Math.PI / 180.0);
 
 	/**
-	 * Shows or hides the split thigh/shin parts. The model instance is shared by
-	 * every player the renderer draws, and {@code resetPose()} only restores
-	 * transforms — not visibility — so this must be set on every frame, both ways.
+	 * Hides the vanilla legs so {@link it.alqu.skatable.client.render.SkateLegLayer}
+	 * can draw deforming ones instead. The model instance is shared by every player
+	 * the renderer draws and {@code resetPose()} only restores transforms — not
+	 * visibility — so this is set on every frame, both ways.
 	 */
-	private void skatable$setKneeSplit(ModelPart leg, boolean split) {
-		if (!leg.hasChild(SkatePartNames.segment(0))) {
-			return;
-		}
-		leg.skipDraw = split;
-		leg.getChild(SkatePartNames.segment(0)).visible = split;
+	private void skatable$hideVanillaLegs(boolean hide) {
 		PlayerModel self = (PlayerModel) (Object) this;
-		ModelPart overlay = leg == this.leftLeg ? self.leftPants : self.rightPants;
-		overlay.visible = !split;
-	}
-
-	/**
-	 * Spreads a total bend angle down the leg's slices. The weights peak around
-	 * the knee, so the leg reads as a curve that tightens at the joint rather
-	 * than a hinge snapping in two.
-	 */
-	private static final float[] BEND_WEIGHTS = { 0.08f, 0.34f, 0.38f, 0.20f };
-
-	private void skatable$curveLeg(ModelPart leg, float totalBend) {
-		ModelPart segment = leg.getChild(SkatePartNames.segment(0));
-		for (int i = 0; i < SkatePartNames.SEGMENTS; i++) {
-			segment.xRot = totalBend * BEND_WEIGHTS[Math.min(i, BEND_WEIGHTS.length - 1)];
-			if (i + 1 < SkatePartNames.SEGMENTS) {
-				segment = segment.getChild(SkatePartNames.segment(i + 1));
-			}
-		}
+		this.leftLeg.visible = !hide;
+		this.rightLeg.visible = !hide;
+		self.leftPants.visible = !hide;
+		self.rightPants.visible = !hide;
 	}
 
 	@Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
 	private void skatable$skatePose(AvatarRenderState state, CallbackInfo ci) {
 		SkateRideState ride = state.getData(SkateRideState.KEY);
 		if (ride == null) {
-			// Not skating: make sure the whole leg is drawn normally again.
-			this.skatable$setKneeSplit(this.leftLeg, false);
-			this.skatable$setKneeSplit(this.rightLeg, false);
+			// Not skating: make sure the vanilla legs are drawn normally again.
+			this.skatable$hideVanillaLegs(false);
 			return;
 		}
-		this.skatable$setKneeSplit(this.leftLeg, true);
-		this.skatable$setKneeSplit(this.rightLeg, true);
+		this.skatable$hideVanillaLegs(true);
 
 		float splay = ride.goofy() ? -1.0f : 1.0f;
 		float stance = 62.0f * splay;
@@ -110,12 +88,6 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		backLeg.xRot = bend * 0.7f * DEG;
 		backLeg.yRot = 0.0f;
 		backLeg.zRot = (9.0f * splay) * DEG;
-
-		// Knee flex, curved across the leg's slices so the limb bends smoothly
-		// instead of snapping at a single joint.
-		float knee = (18.0f + 40.0f * crouch) * DEG;
-		this.skatable$curveLeg(frontLeg, knee);
-		this.skatable$curveLeg(backLeg, knee * 0.75f);
 
 		// Sink slightly so the bent knees do not lift the feet off the deck.
 		float sink = 1.1f * crouch;
