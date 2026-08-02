@@ -35,18 +35,31 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 	 * transforms — not visibility — so this must be set on every frame, both ways.
 	 */
 	private void skatable$setKneeSplit(ModelPart leg, boolean split) {
-		if (!leg.hasChild(SkatePartNames.THIGH)) {
+		if (!leg.hasChild(SkatePartNames.segment(0))) {
 			return;
 		}
 		leg.skipDraw = split;
-		leg.getChild(SkatePartNames.THIGH).visible = split;
+		leg.getChild(SkatePartNames.segment(0)).visible = split;
 		PlayerModel self = (PlayerModel) (Object) this;
 		ModelPart overlay = leg == this.leftLeg ? self.leftPants : self.rightPants;
 		overlay.visible = !split;
 	}
 
-	private ModelPart skatable$thigh(ModelPart leg) {
-		return leg.getChild(SkatePartNames.THIGH);
+	/**
+	 * Spreads a total bend angle down the leg's slices. The weights peak around
+	 * the knee, so the leg reads as a curve that tightens at the joint rather
+	 * than a hinge snapping in two.
+	 */
+	private static final float[] BEND_WEIGHTS = { 0.08f, 0.34f, 0.38f, 0.20f };
+
+	private void skatable$curveLeg(ModelPart leg, float totalBend) {
+		ModelPart segment = leg.getChild(SkatePartNames.segment(0));
+		for (int i = 0; i < SkatePartNames.SEGMENTS; i++) {
+			segment.xRot = totalBend * BEND_WEIGHTS[Math.min(i, BEND_WEIGHTS.length - 1)];
+			if (i + 1 < SkatePartNames.SEGMENTS) {
+				segment = segment.getChild(SkatePartNames.segment(i + 1));
+			}
+		}
 	}
 
 	@Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
@@ -98,15 +111,11 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		backLeg.yRot = 0.0f;
 		backLeg.zRot = (9.0f * splay) * DEG;
 
-		// Actual knee flex: the thigh drives forward and the shin folds back
-		// under it, so the bend happens at the knee rather than at the hip.
+		// Knee flex, curved across the leg's slices so the limb bends smoothly
+		// instead of snapping at a single joint.
 		float knee = (18.0f + 40.0f * crouch) * DEG;
-		ModelPart frontThigh = this.skatable$thigh(frontLeg);
-		ModelPart backThigh = this.skatable$thigh(backLeg);
-		frontThigh.xRot = -knee * 0.5f;
-		frontThigh.getChild(SkatePartNames.SHIN).xRot = knee;
-		backThigh.xRot = -knee * 0.35f;
-		backThigh.getChild(SkatePartNames.SHIN).xRot = knee * 0.75f;
+		this.skatable$curveLeg(frontLeg, knee);
+		this.skatable$curveLeg(backLeg, knee * 0.75f);
 
 		// Sink slightly so the bent knees do not lift the feet off the deck.
 		float sink = 1.1f * crouch;

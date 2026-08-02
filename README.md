@@ -69,10 +69,14 @@ stance with genuinely bent knees, arms out for balance, leaning into carves, cro
 lower the faster you go, tucking during tricks, and a wobble while grinding. Each player
 is consistently **regular or goofy** (derived from their UUID).
 
-The vanilla player leg is one rigid cuboid with no knee, so the mod splits each leg into
-a thigh and a shin (reusing the leg's own skin region, overlay layers included) and only
-shows the split while skating. Tuning constants live at the top of
-`PlayerModelMixin.skatable$skatePose` — stance angle, lean, crouch depth and knee flex.
+The vanilla player leg is one rigid cuboid with no knee, so the mod slices each leg into
+four stacked segments (reusing the leg's own skin region, overlay layers included) and
+spreads the bend across them, weighted to peak at the knee. Minecraft has no vertex
+skinning, so this approximates a curve rather than truly deforming the mesh — but the
+texture stays continuous and there is no hard break at a single hinge. The slices are
+hidden entirely unless the rider is skating. Tuning constants live at the top of
+`PlayerModelMixin.skatable$skatePose` (stance, lean, crouch, knee flex) and in
+`BEND_WEIGHTS` / `SkatePartNames.SEGMENTS`.
 
 This is built into the mod — no Emotecraft or Essential needed, and other players see
 the stance too, since it's driven by the board state that's already synced.
