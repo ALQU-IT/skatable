@@ -3,15 +3,22 @@ package it.alqu.skatable.recipe;
 import com.mojang.serialization.MapCodec;
 import it.alqu.skatable.Skatable;
 import it.alqu.skatable.item.SkateboardItem;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -91,6 +98,40 @@ public class SkateboardRecipe extends CustomRecipe {
 			}
 		}
 		return remaining;
+	}
+
+	/**
+	 * Recipe-book entries. The real recipe accepts any full block, which a fixed
+	 * display can't express, so we advertise one entry per showcase material plus
+	 * the two bucket decks.
+	 */
+	@Override
+	public List<RecipeDisplay> display() {
+		List<RecipeDisplay> displays = new ArrayList<>();
+		SlotDisplay iron = new SlotDisplay.ItemSlotDisplay(Items.IRON_INGOT);
+		SlotDisplay empty = SlotDisplay.Empty.INSTANCE;
+		SlotDisplay table = new SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE);
+
+		for (Block deck : DeckShowcase.DECKS) {
+			SlotDisplay deckSlot = new SlotDisplay.ItemSlotDisplay(deck.asItem());
+			displays.add(new ShapedCraftingRecipeDisplay(3, 2,
+					List.of(iron, empty, iron, deckSlot, deckSlot, deckSlot),
+					resultDisplay(deck), table));
+		}
+		for (var fluid : List.of(
+				Map.entry(Items.WATER_BUCKET, Blocks.WATER),
+				Map.entry(Items.LAVA_BUCKET, Blocks.LAVA))) {
+			SlotDisplay bucket = new SlotDisplay.ItemSlotDisplay(fluid.getKey());
+			displays.add(new ShapedCraftingRecipeDisplay(3, 2,
+					List.of(iron, empty, iron, bucket, bucket, bucket),
+					resultDisplay(fluid.getValue()), table));
+		}
+		return displays;
+	}
+
+	static SlotDisplay resultDisplay(Block deck) {
+		return new SlotDisplay.ItemStackSlotDisplay(
+				ItemStackTemplate.fromNonEmptyStack(SkateboardItem.forDeck(deck)));
 	}
 
 	@Override

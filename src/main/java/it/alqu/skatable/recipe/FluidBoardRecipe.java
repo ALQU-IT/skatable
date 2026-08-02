@@ -79,6 +79,19 @@ public class FluidBoardRecipe extends CustomRecipe {
 		return remaining;
 	}
 
+	/** Recipe-book entry: an oak board plus the bucket, yielding the fluid board. */
+	@Override
+	public java.util.List<net.minecraft.world.item.crafting.display.RecipeDisplay> display() {
+		var board = new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
+				net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(
+						SkateboardItem.forDeck(net.minecraft.world.level.block.Blocks.OAK_PLANKS)));
+		var bucketSlot = new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(this.bucket);
+		return java.util.List.of(new net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay(
+				java.util.List.of(board, bucketSlot),
+				SkateboardRecipe.resultDisplay(this.deck),
+				new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));
+	}
+
 	@Override
 	public RecipeSerializer<? extends CustomRecipe> getSerializer() {
 		return Skatable.FLUID_BOARD_RECIPE_SERIALIZER;

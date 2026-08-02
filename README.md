@@ -30,6 +30,11 @@ diamond block, netherite block, modded blocks... Excluded: blocks with block ent
 (chests, furnaces), non-solid blocks, gravity blocks (sand, gravel), and anything in the
 `#skatable:deck_blacklist` block tag.
 
+The recipe appears in the vanilla **recipe book**. Since "any block" can't be expressed
+as a fixed recipe, the book lists one entry per showcase material (one per deck-power
+family, plus the signature blocks and both fluid boards) — so browsing the book doubles
+as a tour of the deck powers. The list lives in `DeckShowcase.java`.
+
 **Deck materials matter (a little):** heavier blocks (stone, metal) give more durability
 but slower acceleration; lighter blocks (wood, wool) accelerate faster but wear out
 sooner. The item name always shows the material — e.g. *Skateboard (Diamond Block)*.
