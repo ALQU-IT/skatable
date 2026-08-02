@@ -45,7 +45,7 @@ sooner. The item name always shows the material — e.g. *Skateboard (Diamond Bl
 |---|---|
 | Place board | Right-click the ground with the item |
 | Pick board up | Sneak + right-click the board (keeps material, durability, enchantments) |
-| Mount | Right-click the board — you stand on the deck |
+| Mount | Right-click the board — you stand on the deck in a skate stance |
 | Push / accelerate | **W** |
 | Brake | **S** |
 | Lean / steer | **A** / **D** |
@@ -61,6 +61,16 @@ Momentum physics: the board keeps rolling and slowly loses speed to friction.
 - **Terrain:** the board rolls up 1-block ledges like a horse. Downhill speeds you up,
   uphill slows you down. Crashing into a wall (2+ blocks) at speed throws you off,
   hurts a little, and damages the board. Riding reduces fall damage.
+
+## Skate stance
+
+Riders are posed properly instead of using the vanilla boat-sitting pose: sideways
+stance with bent knees, arms out for balance, leaning into carves, crouching lower the
+faster you go, tucking during tricks, and a wobble while grinding. Each player is
+consistently **regular or goofy** (derived from their UUID).
+
+This is built into the mod — no Emotecraft or Essential needed, and other players see
+the stance too, since it's driven by the board state that's already synced.
 
 ## Tricks
 
