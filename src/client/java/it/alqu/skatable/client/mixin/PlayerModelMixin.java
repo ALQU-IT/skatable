@@ -1,6 +1,7 @@
 package it.alqu.skatable.client.mixin;
 
 import it.alqu.skatable.Trick;
+import it.alqu.skatable.client.render.SkatePartNames;
 import it.alqu.skatable.client.render.SkateRideState;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -28,12 +29,37 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 
 	private static final float DEG = (float) (Math.PI / 180.0);
 
+	/**
+	 * Shows or hides the split thigh/shin parts. The model instance is shared by
+	 * every player the renderer draws, and {@code resetPose()} only restores
+	 * transforms — not visibility — so this must be set on every frame, both ways.
+	 */
+	private void skatable$setKneeSplit(ModelPart leg, boolean split) {
+		if (!leg.hasChild(SkatePartNames.THIGH)) {
+			return;
+		}
+		leg.skipDraw = split;
+		leg.getChild(SkatePartNames.THIGH).visible = split;
+		PlayerModel self = (PlayerModel) (Object) this;
+		ModelPart overlay = leg == this.leftLeg ? self.leftPants : self.rightPants;
+		overlay.visible = !split;
+	}
+
+	private ModelPart skatable$thigh(ModelPart leg) {
+		return leg.getChild(SkatePartNames.THIGH);
+	}
+
 	@Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
 	private void skatable$skatePose(AvatarRenderState state, CallbackInfo ci) {
 		SkateRideState ride = state.getData(SkateRideState.KEY);
 		if (ride == null) {
+			// Not skating: make sure the whole leg is drawn normally again.
+			this.skatable$setKneeSplit(this.leftLeg, false);
+			this.skatable$setKneeSplit(this.rightLeg, false);
 			return;
 		}
+		this.skatable$setKneeSplit(this.leftLeg, true);
+		this.skatable$setKneeSplit(this.rightLeg, true);
 
 		float splay = ride.goofy() ? -1.0f : 1.0f;
 		float stance = 62.0f * splay;
@@ -62,7 +88,7 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		ModelPart backArm = ride.goofy() ? this.leftArm : this.rightArm;
 
 		// Feet stay planted on the deck: the legs are splayed apart along the
-		// board rather than swung forward, so the knees bend without lifting.
+		// board rather than swung forward.
 		float bend = 10.0f + 16.0f * crouch;
 		frontLeg.xRot = -bend * DEG;
 		frontLeg.yRot = 0.0f;
@@ -71,6 +97,16 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		backLeg.xRot = bend * 0.7f * DEG;
 		backLeg.yRot = 0.0f;
 		backLeg.zRot = (9.0f * splay) * DEG;
+
+		// Actual knee flex: the thigh drives forward and the shin folds back
+		// under it, so the bend happens at the knee rather than at the hip.
+		float knee = (18.0f + 40.0f * crouch) * DEG;
+		ModelPart frontThigh = this.skatable$thigh(frontLeg);
+		ModelPart backThigh = this.skatable$thigh(backLeg);
+		frontThigh.xRot = -knee * 0.5f;
+		frontThigh.getChild(SkatePartNames.SHIN).xRot = knee;
+		backThigh.xRot = -knee * 0.35f;
+		backThigh.getChild(SkatePartNames.SHIN).xRot = knee * 0.75f;
 
 		// Sink slightly so the bent knees do not lift the feet off the deck.
 		float sink = 1.1f * crouch;

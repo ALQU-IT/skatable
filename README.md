@@ -65,9 +65,14 @@ Momentum physics: the board keeps rolling and slowly loses speed to friction.
 ## Skate stance
 
 Riders are posed properly instead of using the vanilla boat-sitting pose: sideways
-stance with bent knees, arms out for balance, leaning into carves, crouching lower the
-faster you go, tucking during tricks, and a wobble while grinding. Each player is
-consistently **regular or goofy** (derived from their UUID).
+stance with genuinely bent knees, arms out for balance, leaning into carves, crouching
+lower the faster you go, tucking during tricks, and a wobble while grinding. Each player
+is consistently **regular or goofy** (derived from their UUID).
+
+The vanilla player leg is one rigid cuboid with no knee, so the mod splits each leg into
+a thigh and a shin (reusing the leg's own skin region, overlay layers included) and only
+shows the split while skating. Tuning constants live at the top of
+`PlayerModelMixin.skatable$skatePose` — stance angle, lean, crouch depth and knee flex.
 
 This is built into the mod — no Emotecraft or Essential needed, and other players see
 the stance too, since it's driven by the board state that's already synced.
