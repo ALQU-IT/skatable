@@ -27,6 +27,10 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 	}
 
 	private static final float DEG = (float) (Math.PI / 180.0);
+	/** Model-space depth of the feet below the root: hips at 12 plus a 12-long leg. */
+	private static final float FOOT_HEIGHT = 24.0f;
+	/** Half the gap between the feet, widened from vanilla's 1.9 into a skate stance. */
+	private static final float STANCE_WIDTH = 3.1f;
 
 	/**
 	 * Hides the vanilla legs so {@link it.alqu.skatable.client.render.SkateLegLayer}
@@ -61,21 +65,32 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		float crouch = 0.3f + 0.4f * speed + (ride.grinding() ? 0.3f : 0.0f);
 		crouch = Math.min(crouch, 1.0f);
 
-		// Whole-body stance: turn sideways. Only the yaw goes on the root — the
-		// root pivots at shoulder height, so leaning it would swing the feet off
-		// the deck. The carve lean is applied to the torso instead, leaving the
-		// legs planted, which is also how a skater actually leans.
+		// Move the root's pivot down to the feet before rotating. A part rotates
+		// about its own offset, and every candidate pivot in this model is wrong
+		// for a carve: the root sits at shoulder height (leaning it throws the
+		// feet off the deck) and the body sits at the neck (leaning it swings the
+		// hips out and tears the torso away from the legs, which are siblings).
+		// Shifting the root down and every direct child back up by the same amount
+		// changes only the pivot, leaving the pose identical — so the rider now
+		// leans about the board's contact patch, exactly like a real skater.
 		ModelPart root = this.root();
+		root.y += FOOT_HEIGHT;
+		this.body.y -= FOOT_HEIGHT;
+		this.head.y -= FOOT_HEIGHT;
+		this.leftArm.y -= FOOT_HEIGHT;
+		this.rightArm.y -= FOOT_HEIGHT;
+		this.leftLeg.y -= FOOT_HEIGHT;
+		this.rightLeg.y -= FOOT_HEIGHT;
+
 		root.yRot += stance * DEG;
+		root.zRot += lean * DEG;
 
 		// The head keeps tracking where the player is actually looking.
 		this.head.yRot -= stance * DEG;
 		this.head.xRot = Mth.clamp(this.head.xRot, -35.0f * DEG, 35.0f * DEG);
-		this.head.zRot += lean * 0.6f * DEG;
 
-		// Torso hunches forward over the board as speed builds, and leans into turns.
+		// Torso hunches forward over the board as speed builds.
 		this.body.xRot = (8.0f + 16.0f * crouch) * DEG;
-		this.body.zRot += lean * DEG;
 
 		ModelPart frontLeg = ride.goofy() ? this.rightLeg : this.leftLeg;
 		ModelPart backLeg = ride.goofy() ? this.leftLeg : this.rightLeg;
@@ -87,11 +102,13 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		// pull the leg away from the body. They only splay apart along the board.
 		frontLeg.xRot = 0.0f;
 		frontLeg.yRot = 0.0f;
-		frontLeg.zRot = (-6.0f * splay) * DEG;
+		frontLeg.zRot = (-5.0f * splay) * DEG;
+		this.leftLeg.x = STANCE_WIDTH;
 
 		backLeg.xRot = 0.0f;
 		backLeg.yRot = 0.0f;
-		backLeg.zRot = (6.0f * splay) * DEG;
+		backLeg.zRot = (5.0f * splay) * DEG;
+		this.rightLeg.x = -STANCE_WIDTH;
 
 		// A curved leg is shorter than a straight one, so drop the whole model by
 		// exactly that difference and the feet stay planted on the deck.
@@ -129,7 +146,7 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		// Grinding wobble, so a grind reads differently from a straight roll.
 		if (ride.grinding()) {
 			float wobble = Mth.sin(state.ageInTicks * 0.55f) * 3.5f;
-			this.body.zRot += wobble * DEG;
+			root.zRot += wobble * DEG;
 			frontArm.zRot += wobble * 1.5f * DEG;
 			backArm.zRot -= wobble * 1.5f * DEG;
 		}
