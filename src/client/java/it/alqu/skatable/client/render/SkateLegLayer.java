@@ -87,6 +87,16 @@ public class SkateLegLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 	}
 
 	/**
+	 * How far the foot ends up below the hip once the leg is curved. A bent leg
+	 * is shorter than a straight one, so the pose has to sink the whole model by
+	 * the difference to keep the feet on the deck.
+	 */
+	public static float footDrop(float bend) {
+		Ring[] rings = buildRings(bend, 0.0f);
+		return rings[rings.length - 1].centre().y();
+	}
+
+	/**
 	 * Sweeps a square cross-section down a curved centreline. The bend is spread
 	 * over the rings with a bell weighting so the leg curves through the knee
 	 * instead of creasing at one joint.

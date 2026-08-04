@@ -61,36 +61,41 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		float crouch = 0.3f + 0.4f * speed + (ride.grinding() ? 0.3f : 0.0f);
 		crouch = Math.min(crouch, 1.0f);
 
-		// Whole-body stance: turn sideways and lean into the carve.
+		// Whole-body stance: turn sideways. Only the yaw goes on the root — the
+		// root pivots at shoulder height, so leaning it would swing the feet off
+		// the deck. The carve lean is applied to the torso instead, leaving the
+		// legs planted, which is also how a skater actually leans.
 		ModelPart root = this.root();
 		root.yRot += stance * DEG;
-		root.zRot += lean * DEG;
 
 		// The head keeps tracking where the player is actually looking.
 		this.head.yRot -= stance * DEG;
 		this.head.xRot = Mth.clamp(this.head.xRot, -35.0f * DEG, 35.0f * DEG);
+		this.head.zRot += lean * 0.6f * DEG;
 
-		// Torso hunches forward over the board as speed builds.
+		// Torso hunches forward over the board as speed builds, and leans into turns.
 		this.body.xRot = (8.0f + 16.0f * crouch) * DEG;
+		this.body.zRot += lean * DEG;
 
 		ModelPart frontLeg = ride.goofy() ? this.rightLeg : this.leftLeg;
 		ModelPart backLeg = ride.goofy() ? this.leftLeg : this.rightLeg;
 		ModelPart frontArm = ride.goofy() ? this.rightArm : this.leftArm;
 		ModelPart backArm = ride.goofy() ? this.leftArm : this.rightArm;
 
-		// Feet stay planted on the deck: the legs are splayed apart along the
-		// board rather than swung forward.
-		float bend = 10.0f + 16.0f * crouch;
-		frontLeg.xRot = -bend * DEG;
+		// The curved leg mesh supplies the knee bend, so the leg parts themselves
+		// stay upright — any hip swing here would compound with the curve and
+		// pull the leg away from the body. They only splay apart along the board.
+		frontLeg.xRot = 0.0f;
 		frontLeg.yRot = 0.0f;
-		frontLeg.zRot = (-9.0f * splay) * DEG;
+		frontLeg.zRot = (-6.0f * splay) * DEG;
 
-		backLeg.xRot = bend * 0.7f * DEG;
+		backLeg.xRot = 0.0f;
 		backLeg.yRot = 0.0f;
-		backLeg.zRot = (9.0f * splay) * DEG;
+		backLeg.zRot = (6.0f * splay) * DEG;
 
-		// Sink slightly so the bent knees do not lift the feet off the deck.
-		float sink = 1.1f * crouch;
+		// A curved leg is shorter than a straight one, so drop the whole model by
+		// exactly that difference and the feet stay planted on the deck.
+		float sink = 12.0f - it.alqu.skatable.client.render.SkateLegLayer.footDrop(ride.bend(true));
 		this.body.y += sink;
 		this.head.y += sink;
 		frontLeg.y += sink;
@@ -107,10 +112,8 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		backArm.yRot = 0.0f;
 		backArm.zRot = (40.0f * splay - lean * 0.7f) * DEG;
 
-		// Airborne: pull the knees up under the board.
+		// Airborne: the extra knee tuck is folded into the mesh bend itself.
 		if (ride.airborne()) {
-			frontLeg.xRot -= 20.0f * DEG;
-			backLeg.xRot -= 12.0f * DEG;
 			frontArm.xRot -= 18.0f * DEG;
 		}
 
@@ -118,8 +121,6 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		Trick trick = ride.trick();
 		if (trick != null && trick != Trick.OLLIE) {
 			float tuck = Mth.sin(Mth.clamp(ride.trickTime(), 0.0f, 1.0f) * Mth.PI);
-			frontLeg.xRot -= 40.0f * tuck * DEG;
-			backLeg.xRot -= 26.0f * tuck * DEG;
 			frontArm.xRot -= 35.0f * tuck * DEG;
 			backArm.xRot -= 30.0f * tuck * DEG;
 			this.body.xRot += 12.0f * tuck * DEG;
@@ -128,7 +129,7 @@ public abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState> 
 		// Grinding wobble, so a grind reads differently from a straight roll.
 		if (ride.grinding()) {
 			float wobble = Mth.sin(state.ageInTicks * 0.55f) * 3.5f;
-			root.zRot += wobble * DEG;
+			this.body.zRot += wobble * DEG;
 			frontArm.zRot += wobble * 1.5f * DEG;
 			backArm.zRot -= wobble * 1.5f * DEG;
 		}
