@@ -25,6 +25,9 @@ public class AvatarRendererMixin {
 	)
 	private void skatable$standOnSkateboard(Avatar player, AvatarRenderState state, float partialTicks, CallbackInfo ci) {
 		if (!(player.getVehicle() instanceof SkateboardEntity board)) {
+			// Render states are reused between frames, so a stale ride would keep
+			// posing the player long after they stepped off the board.
+			state.setData(SkateRideState.KEY, null);
 			return;
 		}
 		state.isPassenger = false;

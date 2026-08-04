@@ -54,12 +54,22 @@ public class SkateLegLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
 		Identifier skin = state.skin.body().texturePath();
 		var renderType = RenderTypes.entityTranslucent(skin);
 
+		// Render layers are handed the pose from the same place the model itself is
+		// submitted, which is *before* the model root applies its own transform. The
+		// legs are drawn relative to that root, so it has to be applied here too —
+		// otherwise they ignore the stance yaw, the carve lean and the crouch offset
+		// and end up facing the wrong way, or floating away from the body entirely.
+		poseStack.pushPose();
+		model.root().translateAndRotate(poseStack);
+
 		// Skin regions: right leg (0,16) with trousers at (0,32);
 		// left leg (16,48) with trousers at (0,48).
 		this.submitLeg(poseStack, collector, lightCoords, renderType, model.rightLeg,
 				ride.rightLegBend(), 0, 16, 0, 32);
 		this.submitLeg(poseStack, collector, lightCoords, renderType, model.leftLeg,
 				ride.leftLegBend(), 16, 48, 0, 48);
+
+		poseStack.popPose();
 	}
 
 	private void submitLeg(PoseStack poseStack, SubmitNodeCollector collector, int lightCoords,
