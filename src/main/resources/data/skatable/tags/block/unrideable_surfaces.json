@@ -1,0 +1,14 @@
+{
+	"replace": false,
+	"values": [
+		"#minecraft:sand",
+		"minecraft:soul_sand",
+		"minecraft:soul_soil",
+		"minecraft:mud",
+		"minecraft:muddy_mangrove_roots",
+		"minecraft:powder_snow",
+		"minecraft:magma_block",
+		"minecraft:honey_block",
+		"minecraft:slime_block"
+	]
+}

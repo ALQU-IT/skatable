@@ -1,0 +1,20 @@
+{
+	"description": {
+		"translate": "enchantment.skatable.swift_bearings"
+	},
+	"supported_items": "#skatable:skateboards",
+	"weight": 4,
+	"max_level": 3,
+	"min_cost": {
+		"base": 10,
+		"per_level_above_first": 8
+	},
+	"max_cost": {
+		"base": 50,
+		"per_level_above_first": 9
+	},
+	"anvil_cost": 2,
+	"slots": [
+		"any"
+	]
+}

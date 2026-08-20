@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "it.alqu.skatable.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"AvatarRendererMixin",
+		"PlayerModelMixin",
+		"SpecialModelRenderersAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

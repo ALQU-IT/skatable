@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "it.alqu.skatable.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"GlassStealthMixin",
+		"PiglinAiMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

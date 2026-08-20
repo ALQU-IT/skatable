@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "skatable",
+	"version": "${version}",
+	"name": "Skatable",
+	"description": "Rideable skateboards with momentum physics, a trick system, grinding, and dynamic deck materials.",
+	"authors": [
+		"alqu-it"
+	],
+	"contact": {
+		"sources": "https://github.com/alqu-it/skatable"
+	},
+	"license": "GPL-3.0-or-later",
+	"icon": "assets/skatable/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"it.alqu.skatable.Skatable"
+		],
+		"client": [
+			"it.alqu.skatable.client.SkatableClient"
+		]
+	},
+	"mixins": [
+		"skatable.mixins.json",
+		{
+			"config": "skatable.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

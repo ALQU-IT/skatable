@@ -1,0 +1,10 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:bedrock",
+		"minecraft:barrier",
+		"minecraft:reinforced_deepslate",
+		"minecraft:respawn_anchor",
+		"#minecraft:beds"
+	]
+}
